@@ -5,16 +5,18 @@ import pytest
 import combinations
 from cards import VALUES, SUITS, Card, Deck
 
-expected_pairs = [[
-    Card(SUITS[0], VALUES[0]),
-    Card(SUITS[2], VALUES[0]),
-    Card(choice(SUITS), VALUES[2]),
-    Card(choice(SUITS), VALUES[3]),
-    Card(choice(SUITS), VALUES[4]),
-    Card(choice(SUITS), VALUES[6]),
-    Card(choice(SUITS), VALUES[8])
-], [Card(suit, VALUES[5]) for suit in sample(SUITS, 2)] + [Card(choice(SUITS), value) for value in
-                                                           sample(VALUES[6:], 5)]
+expected_pairs = [
+    [
+        Card(SUITS[0], VALUES[0]),
+        Card(SUITS[2], VALUES[0]),
+        Card(choice(SUITS), VALUES[2]),
+        Card(choice(SUITS), VALUES[3]),
+        Card(choice(SUITS), VALUES[4]),
+        Card(choice(SUITS), VALUES[6]),
+        Card(choice(SUITS), VALUES[8])
+    ],
+    [Card(suit, VALUES[3]) for suit in sample(SUITS, 2)] + [Card(choice(SUITS), value) for value in
+                                                            sample(VALUES[4:], 5)]
 ]
 
 
