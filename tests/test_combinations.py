@@ -2,8 +2,8 @@ from random import sample, choice, shuffle, randint
 
 import pytest
 
-import combinations
-from cards import VALUES, SUITS, Card, Deck
+from entities import combinations
+from entities.cards import VALUES, SUITS, Card, Deck
 
 expected_pairs = [
     [

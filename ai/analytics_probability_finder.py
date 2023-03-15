@@ -1,8 +1,8 @@
 from functools import cached_property
 from typing import Collection
 
-from cards import Card, Deck, SUITS, VALUES, Value, Suit, ZERO_ACE
-from combinations import best_hand, duplicates, cards_by_suit, cards_in_ranges, CARD_RANGES
+from entities.cards import Card, Deck, SUITS, VALUES, Value, Suit, ZERO_ACE
+from entities.combinations import best_hand, duplicates, cards_by_suit, cards_in_ranges, CARD_RANGES
 
 """
 - Find probability of having on an opponent's hand, according to known cards:

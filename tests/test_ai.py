@@ -3,7 +3,7 @@ from secrets import SystemRandom
 import pytest
 
 from ai.ai import all_possible_sets_to_open
-from cards import Deck
+from entities.cards import Deck
 
 secure_random = SystemRandom()
 

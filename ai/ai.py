@@ -9,10 +9,10 @@
 from functools import lru_cache
 from secrets import SystemRandom
 
-from cards import Card, Deck, VALUES
-from combinations import best_hand, Combination, COMBINATIONS
+from entities.cards import Card, Deck, VALUES
+from entities.combinations import best_hand, Combination, COMBINATIONS
 from config import WEIGHT_QUOTIENT
-from players import Player
+from entities.players import Player
 
 
 random = SystemRandom()

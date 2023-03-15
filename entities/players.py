@@ -1,6 +1,6 @@
 from typing import Any
 
-from cards import Card
+from entities.cards import Card
 from errors import errors  # import UnavailableDecision, TooManyCards, NegativeBetError, NotEnoughMoney, AlreadyInTheGame
 
 
@@ -80,6 +80,7 @@ class Player:
 
     def get_status(self):
         data = {
+            'name': self.name,
             'in_game': self._in_the_game,
             'current_bet': self._current_bet,
             'all_in': self.__all_in,

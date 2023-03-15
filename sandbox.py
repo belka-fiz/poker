@@ -5,10 +5,10 @@ from typing import Iterable
 
 from errors import errors
 from ai.ai import possible_boards, all_possible_sets_to_open, possible_board_according_to_hand, possible_competitors_hands
-from cards import Card, Deck
-from combinations import best_hand
-from game import Game, Round
-from players import Player
+from entities.cards import Card, Deck
+from entities.combinations import best_hand
+from entities.game import Game, Round
+from entities.players import Player
 
 random = SystemRandom()
 
