@@ -38,7 +38,7 @@ def game_of_several_rounds_ai_and_me():
     while True:
         try:
             new_round = game.new_round()
-            if len(new_round._active_players) > 1:
+            if len(new_round.active_players) > 1:
                 for player in players:
                     if player in new_round.players:
                         print(player.hand)

@@ -33,7 +33,6 @@ I've written this to have some practice in Python development and to have a hand
 
 ## Plans
 I'm going to.. 
-- Make a normal entry point instead of 'sandbox' that is used now to configure each game.
 - Tidy up the structure of the program, separate modules into folders, etc.
 - Separate player interface from the game and make AI work through the same interface. This should also help to test the system allowing to emulate players.
 - Implement some math to the AI, instead of just looping through all possible cards and combinations. There are some drafts already.

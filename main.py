@@ -1,7 +1,8 @@
 from pprint import pprint
 from secrets import SystemRandom
 
-from controller.cli import ask_for_input, ask_for_name
+from config import DEFAULT_PLAYERS_NUM, DEFAULT_BUY_IN, DEFAULT_BLIND
+from controller.cli import ask_for_int_input, ask_for_name, ask_for_bool_input
 from data.constants import NAMES
 from entities.combinations import best_hand
 from entities.game import Game, Player
@@ -11,15 +12,16 @@ random = SystemRandom()
 
 
 def start_a_game(number_of_players, init_chips, blind, player_name):
-    players = [Player(init_chips, name=random.choice(NAMES)) for _ in range(number_of_players - 1)]
-    players.append(Player(init_chips, is_ai=False))
+    names = NAMES.copy()
+    players = [Player(init_chips, name=names.pop(random.randint(0, len(names)))) for _ in range(number_of_players - 1)]
+    players.append(Player(init_chips, is_ai=False, name=player_name))
     game = Game(blind, init_chips, continuous=False)
     for player in players:
         game.add_player(player)
     while True:
         try:
             new_round = game.new_round()
-            if len(new_round._active_players) > 1:
+            if len(new_round.active_players) > 1:
                 for player in players:
                     if player in new_round.players:
                         print(player.hand)
@@ -36,9 +38,16 @@ def start_a_game(number_of_players, init_chips, blind, player_name):
 
 def main():
     player_name = ask_for_name()
-    number_of_players = ask_for_input('number of players', (2, 7), (3, 5))
-    init_chips = ask_for_input('initial chips', (100, 100_000), (300, 10_000))
-    blind_size = ask_for_input('blind size', (init_chips // 100, init_chips // 5), (init_chips // 50, init_chips // 10))
+    quick_game = ask_for_bool_input('Would you like to start a quick game?')
+    if quick_game:
+        number_of_players = DEFAULT_PLAYERS_NUM
+        init_chips = DEFAULT_BUY_IN
+        blind_size = DEFAULT_BLIND
+    else:
+        number_of_players = ask_for_int_input('number of players', (2, 7), (3, 5))
+        init_chips = ask_for_int_input('initial chips', (100, 100_000), (300, 10_000))
+        blind_size = ask_for_int_input('blind size', (init_chips // 100, init_chips // 5),
+                                       (init_chips // 50, init_chips // 10))
     start_a_game(number_of_players, init_chips, blind_size, player_name)
 
 

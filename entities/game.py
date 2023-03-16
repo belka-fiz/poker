@@ -92,15 +92,15 @@ class Round:
         self._stage_index += 1
         self._deal_board(self.NUMBER_OF_CARDS[self._stage_index])
         print(f"The board: {self.board}, the pot: {self.pot}")  # todo replace with log OR view call
-        for player in self._active_players:  # reset each player's status
+        for player in self.active_players:  # reset each player's status
             player.new_stage()
 
         # post blinds if pre-flop
         if self._stage_index == 1:
             for i in range(2):
                 amount = self.blind_size / 2 * (1 + i)
-                self._active_players[i].post_blind(amount)
-                print(self._active_players[i].get_status())  # todo replace with log of the last move
+                self.active_players[i].post_blind(amount)
+                print(self.active_players[i].get_status())  # todo replace with log of the last move
             self._bets_round(self.players[1])
         else:
             self._bets_round()
@@ -113,12 +113,12 @@ class Round:
             self._new_stage()
 
     @property
-    def _active_players(self):
+    def active_players(self):
         return [player for player in self.players if player.is_active]
 
     @property
     def _number_of_players_left(self):
-        return len(self._active_players)
+        return len(self.active_players)
 
     @property
     def max_bet(self):
@@ -127,21 +127,21 @@ class Round:
     def _update_queue(self, last_raiser: Player):
         """make a queue of players to move after the last raiser"""
         try:
-            index = self._active_players.index(last_raiser)
+            index = self.active_players.index(last_raiser)
         except ValueError:
-            index = 0
-        return self._active_players[index + 1:] + self._active_players[:index + 1]
+            index = -1
+        return self.active_players[index + 1:] + self.active_players[:index + 1]
 
     def _turns_queue(self, last_raiser: Player) -> Iterable[Player]:
         """get the next player to move"""
         while not_decided := [player for player in self._update_queue(last_raiser) if not player.made_decision]:
-            if len([player for player in self._active_players if not player.is_all_in]) == 1 and not self.max_bet:
+            if len([player for player in self.active_players if not player.is_all_in]) == 1 and not self.max_bet:
                 break
             yield not_decided[0]
 
     def _bets_round(self, last_raiser: Player = None):
         # reset each player's decision except the last raiser and the ones who are all-in
-        for player in self._active_players:
+        for player in self.active_players:
             if player is not last_raiser and not player.is_all_in:
                 player.reset_decision()
 
@@ -195,7 +195,7 @@ class Round:
         for player in self.players:
             player.new_game_round()
         for _ in range(2):
-            for player in self._active_players:
+            for player in self.active_players:
                 player.add_card(self.deck.draw_one())
 
     def _update_bank(self):
@@ -207,18 +207,18 @@ class Round:
     def _find_winners(self):
         print(f"current_players: {self.players}, pot: {self.pot}")
         if self._number_of_players_left == 1:
-            self.winners = [self._active_players[0]]
+            self.winners = [self.active_players[0]]
             return
         else:
             self._stage_index += 1
-            show_downs = tuple(player.show_down() for player in self._active_players)
+            show_downs = tuple(player.show_down() for player in self.active_players)
             players_combs: list[tuple[int, tuple[Combination, tuple]]] = \
                 list(enumerate(best_hand(sd + self.board) for sd in show_downs))
             combinations = sorted(players_combs, key=itemgetter(1), reverse=True)
             winners = []
             for i, comb in players_combs:
                 if comb == combinations[0][1]:
-                    winners.append(self._active_players[i])
+                    winners.append(self.active_players[i])
             self.winners = winners
 
     def _calculate_prize(self):
