@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Iterable
 
-from cards import Suit, SUITS, Card, Value, VALUES, ZERO_ACE
+from entities.cards import Suit, SUITS, Card, Value, VALUES, ZERO_ACE
 
 
 class Combination:
@@ -83,7 +83,7 @@ def pair(cards: Iterable[Card]) -> [None, tuple[Value, list[Card]]]:
     if len(pair_values) == 1:
         return pair_values[0], sorted([card for card in cards if card.value != pair_values[0]],
                                       key=lambda c: c.value,
-                                      reverse=True)
+                                      reverse=True)[:3]
     else:
         return None
 
@@ -118,7 +118,7 @@ def three_of_a_kind(cards: list[Card]) -> [None, tuple[Value, list[Card]]]:
     if len(set_values) == 1:
         return set_values[0], sorted([card for card in cards if card.value != set_values[0]],
                                      key=lambda c: c.value,
-                                     reverse=True)
+                                     reverse=True)[:2]
     else:
         return None
 

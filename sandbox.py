@@ -5,10 +5,10 @@ from typing import Iterable
 
 from errors import errors
 from ai.ai import possible_boards, all_possible_sets_to_open, possible_board_according_to_hand, possible_competitors_hands
-from cards import Card, Deck
-from combinations import best_hand
-from game import Game, Round
-from players import Player
+from entities.cards import Card, Deck
+from entities.combinations import best_hand
+from entities.game import Game, Round
+from entities.players import Player
 
 random = SystemRandom()
 
@@ -38,7 +38,7 @@ def game_of_several_rounds_ai_and_me():
     while True:
         try:
             new_round = game.new_round()
-            if len(new_round._active_players) > 1:
+            if len(new_round.active_players) > 1:
                 for player in players:
                     if player in new_round.players:
                         print(player.hand)
