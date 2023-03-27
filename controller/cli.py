@@ -6,7 +6,7 @@ from entities.players import Player
 def game_cli_action(player: Player, board: [tuple[Card], list[Card]], bet):
     """Player interaction during the game"""
     print(f"Choose your bet. Your cards: {player.hand}, the board: {board}")
-    print(f"Your stack is {player.stack}. Your current bet is {player.get_bet}")
+    print(f"Your stack is {player.stack}. Your current bet is {player.bet.size}")
     print(f"Your variants: {player.ask_for_a_decision(bet)}. The bet is {bet}")
     while True:
         # Make sure the player entered exactly 1 or two words

@@ -1,56 +1,11 @@
-from pprint import pprint
 from secrets import SystemRandom
 from time import time
 from typing import Iterable
 
-from errors import errors
 from ai.ai import possible_boards, all_possible_sets_to_open, possible_board_according_to_hand, possible_competitors_hands
 from entities.cards import Card, Deck
-from entities.combinations import best_hand
-from entities.game import Game, Round
-from entities.players import Player
 
 random = SystemRandom()
-
-
-def round_round_for_two_ai_and_me():
-    player_1 = Player(300)
-    player_2 = Player(300)
-    players = [player_1, player_2]
-    # player_3 = Player(300, is_ai=False)
-    # players.append(player_3)
-    new_round = Round(players, -1, 10)
-    for player in players:
-        print(player.hand)
-        print(best_hand(new_round.board + player.hand) if player.is_active else None)
-        if player in new_round.winners:
-            print('Player is winner')
-    print(new_round.get_status())
-
-
-def game_of_several_rounds_ai_and_me():
-    init_chips = 300
-    players = [Player(init_chips) for _ in range(5)]
-    # players.append(Player(init_chips, is_ai=False))
-    game = Game(10, init_chips, continuous=False)
-    for player in players:
-        game.add_player(player)
-    while True:
-        try:
-            new_round = game.new_round()
-            if len(new_round.active_players) > 1:
-                for player in players:
-                    if player in new_round.players:
-                        print(player.hand)
-                        print(best_hand(new_round.board + player.hand) if player.is_active else None)
-                        if player in new_round.winners:
-                            print('Player is winner')
-            pprint(new_round.get_status(), indent=2)
-            print()
-        except errors.NotEnoughPlayers:
-            break
-    for player in players:
-        print(player.stack)
 
 
 # @cache
@@ -148,9 +103,7 @@ def several_hands(num: int = 2):
 
 def main():
     start = time()
-    # game_of_several_rounds_ai_and_me()
     # hands_calc()
-    round_round_for_two_ai_and_me()
     # time_comparison()
     # several_hands()
     print(f"The game took {(time()-start):.4f} seconds")

@@ -1,30 +1,31 @@
 from typing import Any
 
 from entities.cards import Card
-from errors import errors  # import UnavailableDecision, TooManyCards, NegativeBetError, NotEnoughMoney, AlreadyInTheGame
+from entities.bet import Bet, Decision
+from errors import errors
 
 
 class Player:
     def __init__(self, start_stack: float, is_ai: bool = True, name: str = ''):
         self.__stack = start_stack
-        self._current_bet = 0.0
         self.__hand: list[Card] = []
         self.__all_in = False
         self._in_the_game = True
         self._made_decision = False
-        self._time_to_decide = False
         self.available_decisions = []
         self.requested_bet = 0
         self.__is_ai = is_ai
         self.name = name
+        self.bet: Decision = Decision(Bet.NOT_DECIDED)
 
     # resets
     def _reset_status(self):
         """reset bet status except all_in"""
-        self._current_bet = 0.0
-        if not self.__all_in:
+        if self.__all_in:
+            self.bet.size = 0  # walkaround for current_bet resets
+        else:
             self._made_decision = False
-        self._time_to_decide = False
+            self.bet = Decision(Bet.NOT_DECIDED)
         self.available_decisions = []
         self.requested_bet = 0
 
@@ -35,16 +36,17 @@ class Player:
         self._reset_status()
         self.__hand: list[Card] = []
         self.__all_in = False
-        self._in_the_game = True
+        if self.__stack > 0:
+            self._in_the_game = True
 
     # bets
     def _bet(self, amount):
         if amount:
-            diff = amount - self._current_bet
+            diff = amount - self.bet.size
             if diff >= self.__stack:
                 self.__all_in = True
-                amount = self.__stack + self._current_bet
-            self._current_bet = amount
+                amount = self.__stack + self.bet.size
+                self.bet = Decision(Bet.ALL_IN, amount)
             self.__stack -= diff
             if self.__stack <= 0:
                 self.__stack = 0
@@ -53,10 +55,8 @@ class Player:
         self._bet(amount)
         if self.__all_in:
             self._made_decision = True
-
-    @property
-    def get_bet(self):
-        return self._current_bet
+        else:
+            self.bet = Decision(Bet.BLIND, amount)
 
     @property
     def is_all_in(self):
@@ -72,17 +72,15 @@ class Player:
 
     @property
     def hand(self):
-        """must be used only by the player"""
-        return tuple(self.__hand)
-
-    def show_down(self):
+        # todo think about the security
         return tuple(self.__hand)
 
     def get_status(self):
         data = {
             'name': self.name,
             'in_game': self._in_the_game,
-            'current_bet': self._current_bet,
+            'last_decision': self.bet.action.name.capitalize(),
+            'current_bet': self.bet.size,
             'all_in': self.__all_in,
             'money': self.__stack,
             'made_decision': self._made_decision
@@ -102,11 +100,13 @@ class Player:
         self._made_decision = False
 
     def ask_for_a_decision(self, requested_bet=0.0):
-        self._time_to_decide = True
-        if not requested_bet or requested_bet == self._current_bet:
+        # todo rewrite with enum
+        if not requested_bet or requested_bet == self.bet.size:
             self.available_decisions = ['check', 'fold', 'raise', 'all_in']
-        elif requested_bet < self.__stack - self._current_bet:
+        elif requested_bet < self.__stack + self.bet.size:
             self.available_decisions = ['fold', 'call', 'raise', 'all_in']
+        elif requested_bet == self.__stack + self.bet.size:
+            self.available_decisions = ['fold', 'call', 'all_in']
         else:
             self.available_decisions = ['fold', 'all_in']
         self.requested_bet = requested_bet
@@ -114,26 +114,32 @@ class Player:
 
     def decide(self, decision, amount=0.0):
         """an interface for bets"""
+        # todo rewrite with enum
         if decision not in self.available_decisions:
             error_msg = f'Decision {decision} is not available. Must choose from: {self.available_decisions}'
             raise errors.UnavailableDecision(error_msg)
         if amount < 0:
             raise errors.NegativeBetError
         elif decision == 'check':
-            pass
+            self.bet.action = Bet.CHECK
         elif decision == 'fold':
+            self.bet.action = Bet.FOLD
             self.__hand = []
             self._in_the_game = False
-            pass
         elif decision == 'call':
-            additional = self.requested_bet - self._current_bet
-            self._bet(additional)
+            self._bet(self.requested_bet)
+            self.bet = Decision(Bet.CALL, self.requested_bet)
         elif decision == 'raise':
             if amount < self.requested_bet:
                 raise errors.TooSmallBetError
             self._bet(amount)
+            if not self.__all_in:
+                if amount == self.requested_bet:
+                    self.bet = Decision(Bet.CALL, amount)
+                else:
+                    self.bet = Decision(Bet.RAISE, amount)
         elif decision == 'all_in':
-            self._bet(self.__stack + self._current_bet)
+            self._bet(self.__stack + self.bet.size)
         self._made_decision = True
 
     # money

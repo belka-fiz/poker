@@ -74,22 +74,22 @@ class Deck:
     __cards: tuple[Card] = tuple(Card(s, v) for s in SUITS for v in VALUES)
 
     def __init__(self):
-        self.__order = []
+        self._order = []
         self.mix()
 
     def mix(self) -> None:
-        self.__order = list(self.__cards)
-        shuffle(self.__order)
+        self._order = list(self.__cards)
+        shuffle(self._order)
 
     def draw_one(self) -> Card:
-        return self.__order.pop()
+        return self._order.pop()
 
     def hide_one(self) -> None:
-        self.__order.pop()
+        self._order.pop()
 
     @property
     def cards_left(self) -> int:
-        return len(self.__order)
+        return len(self._order)
 
     @classmethod
     def all_cards(cls) -> set[Card]:
