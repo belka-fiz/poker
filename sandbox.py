@@ -19,14 +19,13 @@ def several_competitors_hands(known_hands: frozenset[frozenset[Card]] = None,
     first_competitors_cards = {frozenset([frozenset(hand)]) for hand in possible_competitors_hands(tuple(known_cards))}
     if competitors_num == 1:
         return first_competitors_cards
-    else:
-        result = set()
-        for possible_opponents_hands in first_competitors_cards:
-            for hand in possible_opponents_hands:
-                _known_hands = known_hands | hand
-            for _result in several_competitors_hands(frozenset([_known_hands]), competitors_num=competitors_num-1):
-                result.add(possible_opponents_hands | _result)
-        return result
+    result = set()
+    for possible_opponents_hands in first_competitors_cards:
+        for hand in possible_opponents_hands:
+            _known_hands = known_hands | hand
+        for _result in several_competitors_hands(frozenset([_known_hands]), competitors_num=competitors_num-1):
+            result.add(possible_opponents_hands | _result)
+    return result
 
 
 def is_pair(hand: Iterable[Card]) -> bool:
@@ -97,7 +96,7 @@ def time_comparison():
 def several_hands(num: int = 2):
     deck = Deck()
     my_hand = frozenset(deck.draw_one() for _ in range(2))
-    hands = my_hand,
+    hands = (my_hand,)
     return several_competitors_hands(known_hands=frozenset(hands), competitors_num=num)
 
 

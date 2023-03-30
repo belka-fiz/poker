@@ -3,7 +3,7 @@ from entities.cards import Deck
 
 def test_all_cards_hashes_are_uniq():
     """compare all hashes and"""
-    hashes = set(hash(card) for card in Deck.all_cards())
+    hashes = {hash(card) for card in Deck.all_cards()}
     assert len(hashes) == 52, "Hashes are not unique"
 
 

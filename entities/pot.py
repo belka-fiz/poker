@@ -39,7 +39,7 @@ class Pot:
                     side_pot.players.remove(player)
 
         # unite the pots with the same number of players
-        pots_by_players_num = {num: [] for num in set(len(pot.players) for pot in self.pots)}
+        pots_by_players_num = {num: [] for num in {len(pot.players) for pot in self.pots}}
         for num in pots_by_players_num:
             pots_by_players_num[num] = [pot for pot in self.pots if len(pot.players) == num]
         new_pots = [SidePot(pots[0].players, sum(pot.size for pot in pots)) for _, pots in pots_by_players_num.items()]
@@ -49,19 +49,19 @@ class Pot:
     def recalculate_pots(self):
         """calculate side pots according to players' contributions to the pot"""
         self.pots = []
-        contributions = sorted(set(size for _, size in self._contributions.items()))
+        contributions = sorted({size for _, size in self._contributions.items()})
         if len(contributions) == 1:
             self.pots = [SidePot(self.players, self.pot_size)]
             return
-        else:
-            last_contribution = 0
-            for contribution in contributions:
-                players = [player for player, contr in self._contributions.items() if contr >= contribution]
-                players_in_the_pot = len(players)
-                pot_size = players_in_the_pot * contribution
-                new_pot = SidePot(players, pot_size - last_contribution * players_in_the_pot)
-                self.pots.append(new_pot)
-                last_contribution = contribution
+
+        last_contribution = 0
+        for contribution in contributions:
+            players = [player for player, contr in self._contributions.items() if contr >= contribution]
+            players_in_the_pot = len(players)
+            pot_size = players_in_the_pot * contribution
+            new_pot = SidePot(players, pot_size - last_contribution * players_in_the_pot)
+            self.pots.append(new_pot)
+            last_contribution = contribution
         self.unite_pots()
 
     def distribute(self, rating: list[tuple[tuple, list[Player]]]):
