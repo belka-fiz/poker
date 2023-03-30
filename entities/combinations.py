@@ -44,7 +44,7 @@ def duplicates(cards: Iterable[Card]) -> dict:
 def _card_ranges() -> list[tuple[Value]]:
     """all possible ranges for straights"""
     _values = (ZERO_ACE,) + VALUES
-    return [tuple(_values[value_index] for value_index in range(i, i+5)) for i in range(len(_values[:-4]))]
+    return [tuple(_values[value_index] for value_index in range(i, i + 5)) for i in range(len(_values[:-4]))]
 
 
 CARD_RANGES = _card_ranges()
@@ -71,7 +71,7 @@ def high_card(cards: Iterable[Card]) -> [None, tuple[Card, list[Card]]]:
     if not cards:
         return None
     _cards = sorted(cards, key=lambda c: c.value, reverse=True)
-    return _cards[0], _cards[1:min(5, len(_cards))]
+    return _cards[0], tuple(_cards[1:min(5, len(_cards))])
 
 
 def pair(cards: Iterable[Card]) -> [None, tuple[Value, list[Card]]]:
@@ -81,9 +81,9 @@ def pair(cards: Iterable[Card]) -> [None, tuple[Value, list[Card]]]:
         if len([card for card in cards if card.value == value]) == 2:
             pair_values.append(value)
     if len(pair_values) == 1:
-        return pair_values[0], sorted([card for card in cards if card.value != pair_values[0]],
-                                      key=lambda c: c.value,
-                                      reverse=True)[:3]
+        return pair_values[0], tuple(sorted([card for card in cards if card.value != pair_values[0]],
+                                            key=lambda c: c.value,
+                                            reverse=True)[:3])
     else:
         return None
 
@@ -116,16 +116,16 @@ def three_of_a_kind(cards: list[Card]) -> [None, tuple[Value, list[Card]]]:
         if len([card for card in cards if card.value == value]) == 3:
             set_values.append(value)
     if len(set_values) == 1:
-        return set_values[0], sorted([card for card in cards if card.value != set_values[0]],
-                                     key=lambda c: c.value,
-                                     reverse=True)[:2]
+        return set_values[0], tuple(sorted([card for card in cards if card.value != set_values[0]],
+                                           key=lambda c: c.value,
+                                           reverse=True)[:2])
     else:
         return None
 
 
 def _in_a_row(values: list[Value]) -> bool:
     for i, v in enumerate(values[:-1]):
-        if v.order + 1 != values[i+1].order:
+        if v.order + 1 != values[i + 1].order:
             return False
     return True
 
@@ -146,7 +146,7 @@ def straight(cards: list[Card]) -> [None, list[Value]]:
     sorted_cards_values = sorted(card_values)
     # try to find a sequence of sorted cards
     for i in list(range(0, max_range))[::-1]:
-        current_range = sorted_cards_values[0+i: 5+i]
+        current_range = sorted_cards_values[0 + i: 5 + i]
         if _in_a_row(current_range):
             return current_range[-1]
     return None
@@ -158,7 +158,7 @@ def flush(cards: list[Card]) -> [None, list[Card]]:
     for suit in SUITS:
         flush_cards = [card for card in cards if card.suit == suit]
         if len(flush_cards) >= 5:
-            return sorted(flush_cards, key=lambda c: c.value, reverse=True)[:5]
+            return tuple(sorted(flush_cards, key=lambda c: c.value, reverse=True)[:5])
     return None
 
 
@@ -243,7 +243,7 @@ COMBINATIONS = (  # do not reorder
 
 
 # @lru_cache(maxsize=128)
-def best_hand(cards: tuple[Card]) -> tuple[Combination, tuple]:
+def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
     for combination in COMBINATIONS:
         found = combination.check(cards)
         if found:
@@ -252,5 +252,6 @@ def best_hand(cards: tuple[Card]) -> tuple[Combination, tuple]:
 
 if __name__ == '__main__':
     from cards import Deck
+
     print(*_card_ranges(), sep='\n')
     print(cards_in_ranges(list(Deck.all_cards())))

@@ -28,7 +28,6 @@ I've written this to have some practice in Python development and to have a hand
 9. The pot is split between the winners.
 
 ## Known issues:
-- There is no structure for complicated cases with multiple all-ins of different sizes and several pots. To be implemented.
 - It takes quite long for AI to calculate chances and make a decision on the Flop stage. AI will be completely overwritten using math. One day and maybe.
 
 ## Plans
