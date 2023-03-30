@@ -9,6 +9,7 @@
 from functools import lru_cache
 from secrets import SystemRandom
 
+from entities.bet import Bet, Decision
 from entities.cards import Card, Deck, VALUES
 from entities.combinations import best_hand, Combination, COMBINATIONS
 from errors.errors import UnavailableDecision, TooSmallBetError
@@ -147,15 +148,15 @@ class StageBetAI:
             return random.randint(1, 3) * self.blind
         return round(self.weight_ratio ** 2) * self.blind
 
-    def should_i_bet(self, max_bet) -> list[str]:
+    def should_i_bet(self, max_bet) -> list[Bet]:
         if self.comfort_bet() * 3 < max_bet:
-            return ['fold']
+            return [Bet.FOLD]
         elif self.will_i_win_by_weight() is True or self.bluff:
-            return ['raise', 'call', 'all_in']
+            return [Bet.RAISE, Bet.CALL, Bet.ALL_IN]
         elif self.will_i_win_by_weight() is False:
-            return ['check', 'fold']
+            return [Bet.CHECK, Bet.FOLD]
         elif self.will_i_win_by_weight() is None:
-            return ['check', 'call', 'fold']
+            return [Bet.CHECK, Bet.CALL, Bet.FOLD]
 
     def how_much_to_bet(self, max_bet) -> float:
         bet = self.comfort_bet() * random.randint(0, 3)
@@ -194,14 +195,14 @@ class PreFlopDecider:
         else:
             return 0.8 * self.highness() * self.dist_quotient() * self.suit_quotient()
 
-    def decision(self) -> list[str]:
+    def decision(self) -> list[Bet]:
         # print(f"Deciding about preflop. Hand: {self.__hand}, weight: {self._weight:.3f}")
         if self._weight > 0.7:
-            return ['raise', 'call', 'all_in']
+            return [Bet.RAISE, Bet.CALL, Bet.ALL_IN]
         elif 0.7 >= self._weight >= 0.4:
-            return ['raise', 'check', 'call', 'fold']
+            return [Bet.RAISE, Bet.CHECK, Bet.CALL, Bet.FOLD]
         else:
-            return ['check', 'fold']
+            return [Bet.CHECK, Bet.FOLD]
 
     def how_much_to_bet(self, blind, current_bet):
         if self._weight > 0.8:
@@ -210,7 +211,7 @@ class PreFlopDecider:
             bet = 2 * blind
         else:
             bet = blind
-        return min([max([bet, current_bet]), self.player.bet.size + self.player.stack])
+        return min([max([bet, current_bet]), self.player.decision.size + self.player.stack])
 
 
 class AI(Player):
@@ -226,31 +227,31 @@ class AI(Player):
             decider = PreFlopDecider(self)
             ai_decisions = decider.decision()
             try:
-                decision = [d for d in ai_decisions if d in self.available_decisions][0]
+                action = [d for d in ai_decisions if d in self.available_actions][0]
             except IndexError:
                 print(f"Something went wrong")
-                print(f"Player's available decisions: {self.available_decisions}")
+                print(f"Player's available decisions: {self.available_actions}")
                 print(f"AI's suggested decisions: {ai_decisions}")
                 raise UnavailableDecision
             amount = decider.how_much_to_bet(blind_size, current_max_bet)
             try:
-                self.decide(decision, amount)
+                self.decide(Decision(action, amount))
             except TooSmallBetError as e:
                 print(f"{current_max_bet=}, {self.stack=}, "
-                      f"{self.requested_bet=}, {self.available_decisions=}, "
-                      f"{self.bet.size=}, {decision=}, {amount=}")
+                      f"{self.requested_bet=}, {self.available_actions=}, "
+                      f"{self.decision.size=}, {action=}, {amount=}")
                 raise e
         else:
             decider = StageBetAI(board, self, blind_size, number_of_players_left)
             ai_decisions = decider.should_i_bet(current_max_bet)
             try:
-                decision = [d for d in ai_decisions if d in self.available_decisions][0]
+                action = [d for d in ai_decisions if d in self.available_actions][0]
             except IndexError:
                 print(f"Something went wrong")
-                print(f"Player's available decisions: {self.available_decisions}")
+                print(f"Player's available decisions: {self.available_actions}")
                 print(f"AI's suggested decisions: {ai_decisions}")
                 raise UnavailableDecision
-            self.decide(decision, decider.how_much_to_bet(current_max_bet))
+            self.decide(Decision(action, decider.how_much_to_bet(current_max_bet)))
 
 
 def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset[Card]]:

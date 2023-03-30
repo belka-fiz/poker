@@ -9,30 +9,31 @@ class Player:
     def __init__(self, start_stack: float, is_ai: bool = True, name: str = ''):
         self.__stack = start_stack
         self.__hand: list[Card] = []
-        self.__all_in = False
-        self._in_the_game = True
-        self._made_decision = False
-        self.available_decisions = []
-        self.requested_bet = 0
-        self.__is_ai = is_ai
-        self.name = name
-        self.bet: Decision = Decision(Bet.NOT_DECIDED)
+        self.__all_in: bool = False
+        self._in_the_game: bool = True
+        self._made_decision: bool = False
+        self.available_actions: list[Bet] = []
+        self.requested_bet: float = 0
+        self.__is_ai: bool = is_ai
+        self.name: str = name
+        self.decision: Decision = Decision(Bet.NOT_DECIDED)
 
     # resets
     def _reset_status(self):
         """reset bet status except all_in"""
         if self.__all_in:
-            self.bet.size = 0  # walkaround for current_bet resets
+            self.decision.size = 0  # walkaround for current_bet resets
         else:
             self._made_decision = False
-            self.bet = Decision(Bet.NOT_DECIDED)
-        self.available_decisions = []
+            self.decision = Decision(Bet.NOT_DECIDED)
+        self.available_actions = []
         self.requested_bet = 0
 
     def new_stage(self):
         self._reset_status()
 
     def new_game_round(self):
+        """reset everything"""
         self._reset_status()
         self.__hand: list[Card] = []
         self.__all_in = False
@@ -42,11 +43,11 @@ class Player:
     # bets
     def _bet(self, amount):
         if amount:
-            diff = amount - self.bet.size
+            diff = amount - self.decision.size
             if diff >= self.__stack:
                 self.__all_in = True
-                amount = self.__stack + self.bet.size
-                self.bet = Decision(Bet.ALL_IN, amount)
+                amount = self.__stack + self.decision.size
+                self.decision = Decision(Bet.ALL_IN, amount)
             self.__stack -= diff
             if self.__stack <= 0:
                 self.__stack = 0
@@ -56,7 +57,7 @@ class Player:
         if self.__all_in:
             self._made_decision = True
         else:
-            self.bet = Decision(Bet.BLIND, amount)
+            self.decision = Decision(Bet.BLIND, amount)
 
     @property
     def is_all_in(self):
@@ -79,8 +80,8 @@ class Player:
         data = {
             'name': self.name,
             'in_game': self._in_the_game,
-            'last_decision': self.bet.action.name.capitalize(),
-            'current_bet': self.bet.size,
+            'last_decision': self.decision.action.name.capitalize(),
+            'current_bet': self.decision.size,
             'all_in': self.__all_in,
             'money': self.__stack,
             'made_decision': self._made_decision
@@ -100,46 +101,48 @@ class Player:
         self._made_decision = False
 
     def ask_for_a_decision(self, requested_bet=0.0):
-        # todo rewrite with enum
-        if not requested_bet or requested_bet == self.bet.size:
-            self.available_decisions = ['check', 'fold', 'raise', 'all_in']
-        elif requested_bet < self.__stack + self.bet.size:
-            self.available_decisions = ['fold', 'call', 'raise', 'all_in']
-        elif requested_bet == self.__stack + self.bet.size:
-            self.available_decisions = ['fold', 'call', 'all_in']
+        if not requested_bet or requested_bet == self.decision.size:
+            self.available_actions = [Bet.CHECK, Bet.FOLD, Bet.RAISE, Bet.ALL_IN]
+        elif requested_bet < self.__stack + self.decision.size:
+            self.available_actions = [Bet.FOLD, Bet.CALL, Bet.RAISE, Bet.ALL_IN]
+        elif requested_bet == self.__stack + self.decision.size:
+            self.available_actions = [Bet.FOLD, Bet.CALL, Bet.ALL_IN]
         else:
-            self.available_decisions = ['fold', 'all_in']
+            self.available_actions = [Bet.FOLD, Bet.ALL_IN]
         self.requested_bet = requested_bet
-        return self.available_decisions
+        return self.available_actions
 
-    def decide(self, decision, amount=0.0):
+    def decide(self, decision: Decision):
         """an interface for bets"""
-        # todo rewrite with enum
-        if decision not in self.available_decisions:
-            error_msg = f'Decision {decision} is not available. Must choose from: {self.available_decisions}'
+        action = decision.action
+        if action not in self.available_actions:
+            error_msg = f'Decision {decision} is not available. Must choose from: {self.available_actions}'
             raise errors.UnavailableDecision(error_msg)
-        if amount < 0:
+        if decision.size < 0:
             raise errors.NegativeBetError
-        elif decision == 'check':
-            self.bet.action = Bet.CHECK
-        elif decision == 'fold':
-            self.bet.action = Bet.FOLD
+        elif action == Bet.CHECK:
+            self.decision.action = Bet.CHECK
+        elif action == Bet.FOLD:
+            self.decision.action = Bet.FOLD
             self.__hand = []
             self._in_the_game = False
-        elif decision == 'call':
+        elif action == Bet.CALL:
             self._bet(self.requested_bet)
-            self.bet = Decision(Bet.CALL, self.requested_bet)
-        elif decision == 'raise':
-            if amount < self.requested_bet:
+            self.decision = Decision(Bet.CALL, self.requested_bet)
+        elif action == Bet.RAISE:
+            if decision.size < self.requested_bet:
                 raise errors.TooSmallBetError
-            self._bet(amount)
+            self._bet(decision.size)
             if not self.__all_in:
-                if amount == self.requested_bet:
-                    self.bet = Decision(Bet.CALL, amount)
+                if decision.size == self.requested_bet:
+                    if self.requested_bet != 0:
+                        self.decision = Decision(Bet.CALL, decision.size)
+                    else:
+                        self.decision = Decision(Bet.CHECK, decision.size)
                 else:
-                    self.bet = Decision(Bet.RAISE, amount)
-        elif decision == 'all_in':
-            self._bet(self.__stack + self.bet.size)
+                    self.decision = decision
+        elif action == Bet.ALL_IN:
+            self._bet(self.__stack + self.decision.size)
         self._made_decision = True
 
     # money

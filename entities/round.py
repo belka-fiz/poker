@@ -91,7 +91,7 @@ class Round:
     @property
     def max_bet(self):
         """The size of the biggest bet in the current game stage"""
-        return max(player.bet.size for player in self.players)
+        return max(player.decision.size for player in self.players)
 
     def _update_queue(self, last_raiser: Player) -> list[Player]:
         """make a queue of players to move after the last raiser"""
@@ -129,7 +129,7 @@ class Round:
                 game_cli_action(player, self._board, current_max_bet)
 
             print(player.get_status())  # todo replace with log or view call
-            if player.bet.size > current_max_bet:
+            if player.decision.size > current_max_bet:
                 last_raiser = player
                 self._bets_round(last_raiser)
                 return
@@ -146,7 +146,7 @@ class Round:
     def _update_bank(self):
         """collect all bets after each stage"""
         for player in self.players:
-            self.pot.add_chips(player, player.bet.size)
+            self.pot.add_chips(player, player.decision.size)
             player.new_stage()
 
     def _find_winners(self):

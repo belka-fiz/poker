@@ -1,36 +1,56 @@
+from entities.bet import Bet, Decision
 from entities.cards import Card
 from errors.errors import UnavailableDecision, NegativeBetError, TooSmallBetError
 from entities.players import Player
 
 
-def game_cli_action(player: Player, board: [tuple[Card], list[Card]], bet):
+def text_to_bet(input_str: str) -> tuple[[Decision, None], str]:
+    """Creates a Decision object from the provided user input string and handling errors"""
+    input_values = input_str.split(' ')
+    if len(input_values) not in [1, 2]:
+        return None, "You must input an action and the amount in case of raise"
+
+    if len(input_values) == 2:
+        action, bet_size = input_values
+    else:
+        action = input_values[0]
+        bet_size = 0
+
+    try:
+        return Decision(Bet[action.replace('-', '_').upper()], float(bet_size)), ''
+    except KeyError:
+        return None, "There's no such action"
+    except ValueError:
+        return None, "Invalid bet amount. It must be a floating point number"
+
+
+def make_players_decision(player: Player, decision: Decision) -> str:
+    """Acts the player's Decision and handling errors"""
+    error_msg = ''
+    try:
+        player.decide(decision)
+    except UnavailableDecision:
+        error_msg = "You can't choose this decision"
+    except NegativeBetError:
+        error_msg = "You must enter positive bet"
+    except TooSmallBetError:
+        error_msg = "The bet must not be lower than the current bet"
+    return error_msg
+
+
+def game_cli_action(player: Player, board: [tuple[Card], list[Card]], bet_size):
     """Player interaction during the game"""
-    print(f"Choose your bet. Your cards: {player.hand}, the board: {board}")
-    print(f"Your stack is {player.stack}. Your current bet is {player.bet.size}")
-    print(f"Your variants: {player.ask_for_a_decision(bet)}. The bet is {bet}")
+    prompt = f"Choose your bet. Your cards: {player.hand}, the board: {board}\n" \
+             f"Your stack is {player.stack}. Your current bet is {player.decision.size}\n" \
+             f"Your variants: {player.available_actions}. The bet is {bet_size}"
     while True:
-        # Make sure the player entered exactly 1 or two words
-        if len(input_values := input().split(' ')) not in [1, 2]:
+        input_str = input(prompt + '\n')
+        decision, prompt = text_to_bet(input_str)
+        if prompt:
             continue
-        # Try to post a bet if we have two values, making sure the move is allowed, and the bet is valid
-        elif len(input_values) == 2:
-            decision, bet = input_values
-            try:
-                player.decide(decision, float(bet))
-                break
-            except UnavailableDecision:
-                print("You can't choose this decision")
-            except NegativeBetError:
-                print("You must enter positive bet")
-            except TooSmallBetError:
-                print("The bet must not be lower than the current bet")
-        # Try to perform a single-word action, making sure the move is allowed
-        else:
-            try:
-                player.decide(input_values[0])
-                break
-            except UnavailableDecision:
-                print("You can't choose this decision")
+        prompt = make_players_decision(player, decision)
+        if not prompt:
+            break
 
 
 def ask_for_int_input(parameter: str, domain: tuple[int, int], suggested_range: tuple[int, int]) -> int:
@@ -69,8 +89,6 @@ def ask_for_bool_input(prompt) -> bool:
     """
     print(prompt)
     bool_prompt = "Please, enter 'y' or 'n'!\n"
-    # prompt = " ".join([prompt, bool_prompt])
     while (val := input(bool_prompt).lower()) not in ['y', 'n']:
-        # prompt = bool_prompt
         continue
     return val == 'y'
