@@ -57,6 +57,7 @@ def test_get_active_players(players, pot):
 
 
 def test_recalculate_pots_three_different(players, pot):
+    # todo separate test into two
     p1, p2, p3 = players
     pot.add_chips(p1, 20)
     pot.add_chips(p2, 30)
@@ -81,3 +82,14 @@ def test_recalculate_pots_same_size(players, pot):
     pot.recalculate_pots()
     assert len(pot.pots) == 1
     assert pot.pots[0].size == len(players) * 50
+
+
+def test_distribute_pot():
+    """
+    test pot distribution:
+    one size - one winner
+    several sizes - one winner from the biggest pot
+    one player left - the winner
+    three sizes, each time a different winner
+    """
+    pass

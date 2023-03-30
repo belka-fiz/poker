@@ -60,15 +60,16 @@ CARD_RANGES = _card_ranges()
 
 def cards_in_ranges(cards: [list[Card], tuple[Card]]) -> dict[Value: int]:
     """Shows how many uniq cards values are present in each possible range"""
-    _cards = list(cards)
-    _cards_in_ranges = {}
+    card_values_set = {c.value for c in cards}
     # duplicate aces for a-to-5 straights
-    card_values_set = {c.value for c in _cards}
     if Value(14, 'Ace', 'A') in card_values_set:
         card_values_set.add(ZERO_ACE)
+
     # count uniq values of given cards for each straight range
+    _cards_in_ranges = {}
     for _range in CARD_RANGES:
         _cards_in_ranges[_range] = len(set(_range).intersection(card_values_set))
+
     return _cards_in_ranges
 
 
@@ -288,7 +289,6 @@ COMBINATIONS = (  # do not reorder
 )
 
 
-# @lru_cache(maxsize=128)
 def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
     """
     Defines the best hand that can be made from the given cards.
@@ -301,10 +301,3 @@ def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
         if found:
             return combination, found
     raise RuntimeError("No best hand found")
-
-
-if __name__ == '__main__':
-    from cards import Deck
-
-    print(*_card_ranges(), sep='\n')
-    print(cards_in_ranges(list(Deck.all_cards())))

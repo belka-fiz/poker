@@ -19,7 +19,7 @@ class Suit:
         return hash(self.short_name)
 
 
-@dataclass(eq=True, order=True)
+@dataclass(order=True)
 class Value:
     """
     Card value.
@@ -35,6 +35,9 @@ class Value:
 
     def __hash__(self):
         return hash(self.short_name)
+
+    def __eq__(self, other):
+        return self.order == other.order
 
 
 SUITS = (

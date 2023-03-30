@@ -5,6 +5,12 @@ import pytest
 from entities import combinations
 from entities.cards import VALUES, SUITS, Card
 
+
+def test_cards_in_ranges():
+    # todo
+    pass
+
+
 expected_pairs = [
     [
         Card(SUITS[0], VALUES[0]),
@@ -62,6 +68,11 @@ def test_straight(offset: int):
     assert combination[0].name == 'straight'
 
 
+def test_straight_zero_ace():
+    """test for straight from Ace to 5"""
+    pass
+
+
 @pytest.mark.parametrize('suit', SUITS, ids=str)
 def test_flush(suit):
     _values = list(VALUES)
@@ -116,3 +127,11 @@ def test_royal_flush():
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'royal_flush'
+
+
+def test_combinations_order():
+    """test that combinations are sorted in the right order"""
+    # todo
+    pass
+
+
