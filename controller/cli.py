@@ -68,8 +68,6 @@ def ask_for_int_input(parameter: str, domain: tuple[int, int], suggested_range: 
             continue
         if domain[0] <= int_value <= domain[1]:
             return int_value
-        else:
-            continue
 
 
 def ask_for_str_input(prompt="Hi! What's your name?\r\n") -> str:
@@ -85,7 +83,8 @@ def ask_for_str_input(prompt="Hi! What's your name?\r\n") -> str:
 
 def ask_for_bool_input(prompt) -> bool:
     """
-    Asks for a bool value. Ensures that user enters 'y' or 'n'. The case doesn't matter.
+    Asks for a bool value.
+    Ensures that user enters 'y' or 'n'. The case doesn't matter.
     """
     print(prompt)
     bool_prompt = "Please, enter 'y' or 'n'!\n"

@@ -31,13 +31,14 @@ def all_possible_sets_to_open(
     number_of_cards_to_open = 7 - len(known_cards) + (2 * for_competitor)
     if number_of_cards_to_open == 0:
         return result
-    elif number_of_cards_to_open == 1:
-        return set(frozenset([card]) for card in deck_rest)
-    else:
-        for card in deck_rest:
-            for _result in all_possible_sets_to_open(known_cards + tuple([card]), for_competitor=for_competitor):
-                intermediate_inner_result = _result | {card}
-                result.add(intermediate_inner_result)
+
+    if number_of_cards_to_open == 1:
+        return {frozenset([card]) for card in deck_rest}
+
+    for card in deck_rest:
+        for _result in all_possible_sets_to_open(known_cards + (card,), for_competitor=for_competitor):
+            intermediate_inner_result = _result | {card}
+            result.add(intermediate_inner_result)
     return result
 
 
@@ -46,13 +47,14 @@ def possible_boards(board: tuple[Card]) -> set[frozenset[Card]]:
     deck_rest = Deck.all_cards() - set(board)
     if len(board) == 5:
         return set()
-    elif 5 - len(board) == 1:
-        return set(frozenset([card]) for card in deck_rest)
-    else:
-        result: set[frozenset[Card]] = set()
-        for card in deck_rest:
-            for _result in possible_boards(board + tuple([card])):
-                result.add(_result | {card})
+
+    if 5 - len(board) == 1:
+        return {frozenset([card]) for card in deck_rest}
+
+    result: set[frozenset[Card]] = set()
+    for card in deck_rest:
+        for _result in possible_boards(board + (card,)):  # noqa
+            result.add(_result | {card})
     return result
 
 
@@ -80,7 +82,8 @@ def update_smallest(chances: dict[Combination: float]) -> None:
         smaller_cmbs = COMBINATIONS[COMBINATIONS.index(cmb)+1:]
         if len(smaller_cmbs) == 0:
             return
-        elif max(chances[smaller_cmb] for smaller_cmb in smaller_cmbs) == 0 and chances[cmb] > 0:
+
+        if max(chances[smaller_cmb] for smaller_cmb in smaller_cmbs) == 0 and chances[cmb] > 0:
             chances[cmb] = 1.0
             break
 
@@ -112,13 +115,13 @@ class StageBetAI:
         if len(self.known_cards) == 7:
             absolute_chances.update({best_hand(self.known_cards)[0]: 1})
             return absolute_chances
-        else:
-            for possible_card_set in self.possible_left_cards:
-                possible_hand = self.known_cards + tuple(possible_card_set)
-                absolute_chances[best_hand(possible_hand)[0]] += 1
-            relative_chances = {k: v / self.possible_variations for k, v in absolute_chances.items()}
-            update_smallest(relative_chances)
-            return relative_chances
+
+        for possible_card_set in self.possible_left_cards:
+            possible_hand = self.known_cards + tuple(possible_card_set)
+            absolute_chances[best_hand(possible_hand)[0]] += 1
+        relative_chances = {k: v / self.possible_variations for k, v in absolute_chances.items()}
+        update_smallest(relative_chances)
+        return relative_chances
 
     def _guess_opponents_chances(self) -> dict[Combination: float]:
         # todo add combination's kicker
@@ -134,14 +137,14 @@ class StageBetAI:
     def will_i_win_by_weight(self):
         if self.weight_ratio > 1:
             return True
-        elif self.weight_ratio < 0.79:
+
+        if self.weight_ratio < 0.79:
             if self.competitors_weight < 5 and random.randint(0, 100) > 60:
                 self.bluff = True
                 return True
-            else:
-                return False
-        else:
-            return None
+            return False
+
+        return None
 
     def comfort_bet(self) -> float:
         if self.bluff:
@@ -151,11 +154,14 @@ class StageBetAI:
     def should_i_bet(self, max_bet) -> list[Bet]:
         if self.comfort_bet() * 3 < max_bet:
             return [Bet.FOLD]
-        elif self.will_i_win_by_weight() is True or self.bluff:
+
+        if self.will_i_win_by_weight() is True or self.bluff:
             return [Bet.RAISE, Bet.CALL, Bet.ALL_IN]
-        elif self.will_i_win_by_weight() is False:
+
+        if self.will_i_win_by_weight() is False:
             return [Bet.CHECK, Bet.FOLD]
-        elif self.will_i_win_by_weight() is None:
+
+        if self.will_i_win_by_weight() is None:
             return [Bet.CHECK, Bet.CALL, Bet.FOLD]
 
     def how_much_to_bet(self, max_bet) -> float:
@@ -166,7 +172,7 @@ class StageBetAI:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        del self
+        pass
 
 
 class PreFlopDecider:
@@ -192,17 +198,18 @@ class PreFlopDecider:
     def weight(self) -> float:
         if self.is_pair():
             return self.highness()
-        else:
-            return 0.8 * self.highness() * self.dist_quotient() * self.suit_quotient()
+
+        return 0.8 * self.highness() * self.dist_quotient() * self.suit_quotient()
 
     def decision(self) -> list[Bet]:
         # print(f"Deciding about preflop. Hand: {self.__hand}, weight: {self._weight:.3f}")
         if self._weight > 0.7:
             return [Bet.RAISE, Bet.CALL, Bet.ALL_IN]
-        elif 0.7 >= self._weight >= 0.4:
+
+        if 0.7 >= self._weight >= 0.4:
             return [Bet.RAISE, Bet.CHECK, Bet.CALL, Bet.FOLD]
-        else:
-            return [Bet.CHECK, Bet.FOLD]
+
+        return [Bet.CHECK, Bet.FOLD]
 
     def how_much_to_bet(self, blind, current_bet):
         if self._weight > 0.8:
@@ -218,8 +225,9 @@ class AI(Player):
     def __init__(self,
                  start_stack: float,
                  name: str = '',
-                 pre_flop_agression: float = 0,
-                 stage_agression: float = 0):
+                 # pre_flop_agression: float = 0,
+                 # stage_agression: float = 0
+                 ):
         super().__init__(start_stack, is_ai=True, name=name)
 
     def make_a_move(self, board, current_max_bet, stage_index, blind_size, number_of_players_left):
@@ -229,7 +237,7 @@ class AI(Player):
             try:
                 action = [d for d in ai_decisions if d in self.available_actions][0]
             except IndexError:
-                print(f"Something went wrong")
+                print("Something went wrong")
                 print(f"Player's available decisions: {self.available_actions}")
                 print(f"AI's suggested decisions: {ai_decisions}")
                 raise UnavailableDecision
@@ -247,7 +255,7 @@ class AI(Player):
             try:
                 action = [d for d in ai_decisions if d in self.available_actions][0]
             except IndexError:
-                print(f"Something went wrong")
+                print("Something went wrong")
                 print(f"Player's available decisions: {self.available_actions}")
                 print(f"AI's suggested decisions: {ai_decisions}")
                 raise UnavailableDecision

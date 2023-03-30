@@ -163,7 +163,7 @@ class Round:
             players_combinations: dict[Player: tuple]
             players_combinations = {player: best_hand(player.hand + self.board) for player in self.active_players}
             # combine all present combinations to a set
-            combs = set(comb for _, comb in players_combinations.items())
+            combs = {comb for _, comb in players_combinations.items()}
             # group players that have the same combination
             players_grouped_by_combinations: dict[Combination: list[Player]] = {comb: [] for comb in combs}
             for player, comb in players_combinations.items():

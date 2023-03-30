@@ -54,7 +54,7 @@ def cards_in_ranges(cards: [list[Card], tuple[Card]]) -> dict[Value: int]:
     _cards = list(cards)
     _cards_in_ranges = {}
     # duplicate aces for a-to-5 straights
-    card_values_set = set(c.value for c in _cards)
+    card_values_set = {c.value for c in _cards}
     if Value(14, 'Ace', 'A') in card_values_set:
         card_values_set.add(ZERO_ACE)
     # count uniq values of given cards for each straight range
@@ -75,7 +75,7 @@ def high_card(cards: Iterable[Card]) -> [None, tuple[Card, list[Card]]]:
 
 
 def pair(cards: Iterable[Card]) -> [None, tuple[Value, list[Card]]]:
-    values = set(card.value for card in cards)
+    values = {card.value for card in cards}
     pair_values = []
     for value in values:
         if len([card for card in cards if card.value == value]) == 2:
@@ -84,14 +84,14 @@ def pair(cards: Iterable[Card]) -> [None, tuple[Value, list[Card]]]:
         return pair_values[0], tuple(sorted([card for card in cards if card.value != pair_values[0]],
                                             key=lambda c: c.value,
                                             reverse=True)[:3])
-    else:
-        return None
+
+    return None
 
 
 def two_pairs(cards: list[Card]) -> [None, tuple[Value, Value, Card]]:
     if len(cards) < 4:
         return None
-    values = set(card.value for card in cards)
+    values = {card.value for card in cards}
     pair_values: list[Value] = []
     for value in values:
         if len([card for card in cards if card.value == value]) == 2:
@@ -99,18 +99,18 @@ def two_pairs(cards: list[Card]) -> [None, tuple[Value, Value, Card]]:
     pair_values.sort(reverse=True)
     if len(pair_values) >= 2:
         try:
-            return pair_values[0], pair_values[1], max([card for card in cards if card.value not in pair_values[:2]],
+            return pair_values[0], pair_values[1], max((card for card in cards if card.value not in pair_values[:2]),
                                                        key=lambda c: c.value)
         except ValueError:
             return pair_values[0], pair_values[1], None
-    else:
-        return None
+
+    return None
 
 
 def three_of_a_kind(cards: list[Card]) -> [None, tuple[Value, list[Card]]]:
     if len(cards) < 3:
         return None
-    values = set(card.value for card in cards)
+    values = {card.value for card in cards}
     set_values = []
     for value in values:
         if len([card for card in cards if card.value == value]) == 3:
@@ -124,10 +124,7 @@ def three_of_a_kind(cards: list[Card]) -> [None, tuple[Value, list[Card]]]:
 
 
 def _in_a_row(values: list[Value]) -> bool:
-    for i, v in enumerate(values[:-1]):
-        if v.order + 1 != values[i + 1].order:
-            return False
-    return True
+    return all(v.order + 1 == values[i + 1].order for i, v in enumerate(values[:-1]))
 
 
 def straight(cards: list[Card]) -> [None, list[Value]]:
@@ -138,11 +135,11 @@ def straight(cards: list[Card]) -> [None, list[Value]]:
     for ace in (card for card in cards if card.value == Value(14, 'Ace', 'A')):
         _cards.append(Card(ace.suit, ZERO_ACE))
     # sort cards by values
-    card_values = set(c.value for c in _cards)
+    card_values = {c.value for c in _cards}
     if len(card_values) < 5:
         return None
-    else:
-        max_range = len(card_values) - 4
+
+    max_range = len(card_values) - 4
     sorted_cards_values = sorted(card_values)
     # try to find a sequence of sorted cards
     for i in list(range(0, max_range))[::-1]:
@@ -165,7 +162,7 @@ def flush(cards: list[Card]) -> [None, list[Card]]:
 def full_house(cards: list[Card]) -> [None, tuple[Value, Value]]:
     if len(cards) < 5:
         return None
-    values = set(card.value for card in cards)
+    values = {card.value for card in cards}
     pair_values: list[Value] = []
     set_values: list[Value] = []
     for value in values:
@@ -174,26 +171,28 @@ def full_house(cards: list[Card]) -> [None, tuple[Value, Value]]:
         elif len([card for card in cards if card.value == value]) == 3:
             set_values.append(value)
     pair_values.sort(reverse=True)
+
     if len(pair_values) >= 1 and len(set_values) == 1:
         return set_values[0], pair_values[0]
-    elif len(set_values) == 2:
+
+    if len(set_values) == 2:
         set_values.sort(reverse=True)
         return set_values[0], set_values[1]
-    else:
-        return None
+
+    return None
 
 
 def four_of_a_kind(cards: list[Card]) -> [None, tuple[Value, Value]]:
     if len(cards) < 4:
         return None
-    values = set(card.value for card in cards)
+    values = {card.value for card in cards}
     four_values: list[Value] = []
     for value in values:
         if len([card for card in cards if card.value == value]) == 4:
             four_values.append(value)
     if len(four_values) == 1:
         try:
-            return four_values[0], max(card.value for card in cards if card.value not in four_values)
+            return four_values[0], max(card.value for card in cards if card.value not in four_values)  # noqa
         except ValueError:
             return four_values[0], None
     else:
@@ -206,11 +205,11 @@ def straight_flush(cards: list[Card]) -> [None, list[Card]]:
     for ace in (card for card in cards if card.value == Value(14, 'Ace', 'A')):
         _cards.append(Card(ace.suit, ZERO_ACE))
     # sort cards by values
-    card_values = set(c.value for c in _cards)
+    card_values = {c.value for c in _cards}
     if len(card_values) < 5:
         return None
-    else:
-        max_range = len(card_values) - 4
+
+    max_range = len(card_values) - 4
     sorted_cards_values = sorted(card_values)
     # try to find a sequence of sorted cards
     for i in list(range(0, max_range))[::-1]:
@@ -224,8 +223,8 @@ def royal_flush(cards: list[Card]) -> [None, list[Card]]:
     _straight_flush = straight_flush(cards)
     if _straight_flush and _straight_flush[0].value == Value(14, 'Ace', 'A'):
         return _straight_flush
-    else:
-        return None
+
+    return None
 
 
 COMBINATIONS = (  # do not reorder
