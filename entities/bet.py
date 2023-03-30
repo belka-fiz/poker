@@ -18,9 +18,13 @@ class Decision:
     def __init__(self,
                  action: Bet,
                  size: float = 0):
-        assert isinstance(action, Bet)
+        if not isinstance(action, Bet):
+            raise ValueError('Action must be a Bet object')
         self.action = action
         self.size = size
 
     def __eq__(self, other):
         return self.action == other.action and self.size == other.size
+
+    def __hash__(self):
+        return self.size + hash(self.action)

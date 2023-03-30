@@ -135,7 +135,10 @@ class Player:
             self._bet(decision.size)
             if not self.__all_in:
                 if decision.size == self.requested_bet:
-                    self.decision = Decision(Bet.CALL, decision.size)
+                    if self.requested_bet != 0:
+                        self.decision = Decision(Bet.CALL, decision.size)
+                    else:
+                        self.decision = Decision(Bet.CHECK, decision.size)
                 else:
                     self.decision = decision
         elif action == Bet.ALL_IN:

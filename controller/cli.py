@@ -5,14 +5,17 @@ from entities.players import Player
 
 
 def text_to_bet(input_str: str) -> tuple[[Decision, None], str]:
+    """Creates a Decision object from the provided user input string and handling errors"""
     input_values = input_str.split(' ')
     if len(input_values) not in [1, 2]:
         return None, "You must input an action and the amount in case of raise"
-    elif len(input_values) == 2:
+
+    if len(input_values) == 2:
         action, bet_size = input_values
     else:
         action = input_values[0]
         bet_size = 0
+
     try:
         return Decision(Bet[action.replace('-', '_').upper()], float(bet_size)), ''
     except KeyError:
@@ -22,6 +25,7 @@ def text_to_bet(input_str: str) -> tuple[[Decision, None], str]:
 
 
 def make_players_decision(player: Player, decision: Decision) -> str:
+    """Acts the player's Decision and handling errors"""
     error_msg = ''
     try:
         player.decide(decision)
