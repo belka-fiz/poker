@@ -99,7 +99,7 @@ def two_pairs(cards: list[Card]) -> [None, tuple[Value, Value, Card]]:
     pair_values.sort(reverse=True)
     if len(pair_values) >= 2:
         try:
-            return pair_values[0], pair_values[1], max([card for card in cards if card.value not in pair_values[:2]],
+            return pair_values[0], pair_values[1], max((card for card in cards if card.value not in pair_values[:2]),
                                                        key=lambda c: c.value)
         except ValueError:
             return pair_values[0], pair_values[1], None
@@ -192,7 +192,7 @@ def four_of_a_kind(cards: list[Card]) -> [None, tuple[Value, Value]]:
             four_values.append(value)
     if len(four_values) == 1:
         try:
-            return four_values[0], max(card.value for card in cards if card.value not in four_values)
+            return four_values[0], max(card.value for card in cards if card.value not in four_values)  # noqa
         except ValueError:
             return four_values[0], None
     else:
