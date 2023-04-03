@@ -5,6 +5,13 @@ from entities.cards import Suit, SUITS, Card, Value, VALUES, ZERO_ACE
 
 
 class Combination:
+    """
+    Class for combinations and their comparison
+    Combinations are initialized according to the tuple in the bottom part of the file
+    Each combination has a priority to others and a function that defines if cards math the combination
+    Combinations are comparable to each other by priority
+    """
+
     def __init__(self, priority: int, func, name):
         self.priority: int = priority
         self.func = func
@@ -243,6 +250,12 @@ COMBINATIONS = (  # do not reorder
 
 # @lru_cache(maxsize=128)
 def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
+    """
+    Defines the best hand that can be made from the given cards.
+    Returns Combination class and the list of found cards to compare hands
+    different hands can be "equal" if they have Combination of the same priority,
+    and the same order of primary and secondary cards.
+    """
     for combination in COMBINATIONS:
         found = combination.check(cards)
         if found:

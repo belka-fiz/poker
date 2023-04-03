@@ -2,6 +2,8 @@ from enum import Enum
 
 
 class Bet(Enum):
+    """Enum for bet actions"""
+
     NOT_DECIDED = 'Not decided'
     FOLD = 'Fold'
     CHECK = 'Check'
@@ -15,6 +17,8 @@ class Bet(Enum):
 
 
 class Decision:
+    """Player's decision, that consists of bet action and the amount of the bet"""
+
     def __init__(self,
                  action: Bet,
                  size: float = 0):

@@ -6,6 +6,11 @@ from errors import errors
 
 
 class Player:
+    """
+    Player entity.
+    Implements player's pocket_cards and bets making
+    """
+
     def __init__(self, start_stack: float, is_ai: bool = True, name: str = ''):
         self.__stack = start_stack
         self.__hand: list[Card] = []
@@ -161,6 +166,7 @@ class Player:
 
 class Account:
     """account, statistics, an interface to login, join games and buy stack"""
+
     def __init__(self, name):
         self.name = name
         self._chips_amount: float = 0.0

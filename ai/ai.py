@@ -90,6 +90,14 @@ def update_smallest(chances: dict[Combination: float]) -> None:
 
 @lru_cache(128)
 class StageBetAI:
+    """
+    Bet decider for AI in the middle of the game
+    Calculates all possible community cards and all possible opponent's pocket cards,
+    then calculates the chances for each combination and multiplies if by weight of the combination.
+    Decides if AI should bet or not and how much according to the weight ration of possible own and opponent's hands.
+    Has a chance of bluff.
+    """
+
     def __init__(self, board: tuple[Card], player: Player, blind: float, players_left: int):
         self.player = player
         self.board = board
@@ -176,6 +184,11 @@ class StageBetAI:
 
 
 class PreFlopDecider:
+    """
+    Decides if AI should bet on pre-flop depending on
+    - if own pocket cards are pair
+    - the values of the pocket cards
+    """
     def __init__(self, player: Player):
         self.player = player
         self.__hand = player.hand
@@ -222,6 +235,11 @@ class PreFlopDecider:
 
 
 class AI(Player):
+    """
+    AI extention for Player's class
+    Contains logic for calling bet decisions classes according to the stage of the game
+    """
+
     def __init__(self,
                  start_stack: float,
                  name: str = '',

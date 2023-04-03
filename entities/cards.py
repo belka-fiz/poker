@@ -4,6 +4,8 @@ from random import shuffle
 
 @dataclass(repr=False)
 class Suit:
+    """Card suit"""
+
     short_name: str
     long_name: str
 
@@ -19,6 +21,11 @@ class Suit:
 
 @dataclass(eq=True, order=True)
 class Value:
+    """
+    Card value.
+    Values are comparable by the order
+    """
+
     order: int
     name: str = field(compare=False)
     short_name: str = field(compare=False)
@@ -57,6 +64,12 @@ ZERO_ACE: Value = Value(1, 'Ace', 'A')
 
 @dataclass(order=True, eq=True)
 class Card:
+    """
+    The card
+    Cards are comparable by value and suit.
+    Cards are equal if their values are equal
+    """
+
     suit: Suit = field(hash=True, compare=False)
     value: Value
 
@@ -71,6 +84,12 @@ class Card:
 
 
 class Deck:
+    """
+    The Deck.
+    Contains 52 cards and mixed in the beginning
+    Cards are removed from the deck when dealt or hidden
+    """
+
     __cards: tuple[Card] = tuple(Card(s, v) for s in SUITS for v in VALUES)
 
     def __init__(self):

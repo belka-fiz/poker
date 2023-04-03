@@ -4,12 +4,15 @@ from entities.players import Player
 
 
 class SidePot(NamedTuple):
+    """Just stores the list of players in a side pot and its size"""
+
     players: list[Player]
     size: float
 
 
 class Pot:
     """Class that stores players contributions to the pot and implements the prize distribution"""
+
     def __init__(self, players: list[Player]):
         self.players = players.copy()
         self._contributions = {player: 0.0 for player in self.players}

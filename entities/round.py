@@ -16,6 +16,7 @@ class Round:
     - blinds posting and betting cycles
     - determining the rating of players' combinations
     """
+
     STAGES = ('deal', 'pre-flop', 'flop', 'turn', 'river', 'showdown')
     # how many cards to open on each stage
     NUMBER_OF_CARDS = {

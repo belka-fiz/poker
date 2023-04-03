@@ -4,6 +4,11 @@ from errors.errors import NotEnoughPlayers
 
 
 class Game:
+    """
+    A game of many rounds.
+    Has logic of game initiation, adding or removing players, blind raises and Round initiation
+    """
+
     def __init__(self, blind: float, buy_in: float, continuous: bool = False):
         self.initial_blind = blind  # set initial size of blind bets
         self.buy_in = buy_in  # set initial chips on the game start
