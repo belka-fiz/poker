@@ -191,6 +191,7 @@ class PreFlopDecider:
     - if own pocket cards are pair
     - the values of the pocket cards
     """
+
     def __init__(self, player: Player):
         self.player = player
         self.__hand = player.hand

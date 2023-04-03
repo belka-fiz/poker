@@ -26,9 +26,14 @@ from entities.combinations import best_hand, duplicates, cards_by_suit, cards_in
 
 
 class ProbabilityCounter:
-    def __init__(self, hand: Collection[Card], board: Collection[Card] = None):
-        self.hand = tuple(hand)
-        self.board = tuple(board or [])
+    """
+    Class aimed to find win chances using combinatorincs and not just simply guessing all possible cards
+    Calculate chances of duplicates, suit matches, cards amount in different ranges, etc
+    """
+
+    def __init__(self, pocket_cards: Collection[Card], community_cards: Collection[Card] = None):
+        self.hand = tuple(pocket_cards)
+        self.board = tuple(community_cards or [])
         self.known_cards = self.hand + self.board
         self.cards_left = 52 - len(self.known_cards)
         self.my_combination = best_hand(self.known_cards)
