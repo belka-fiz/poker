@@ -172,6 +172,8 @@ class StageBetAI:
         if self.will_i_win_by_weight() is None:
             return [Bet.CHECK, Bet.CALL, Bet.FOLD]
 
+        return []
+
     def how_much_to_bet(self, max_bet) -> float:
         bet = self.comfort_bet() * random.randint(0, 3)
         return min(max(bet, max_bet), self.player.stack)

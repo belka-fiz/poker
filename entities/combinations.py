@@ -126,8 +126,7 @@ def three_of_a_kind(cards: list[Card]) -> [None, tuple[Value, list[Card]]]:
         return set_values[0], tuple(sorted([card for card in cards if card.value != set_values[0]],
                                            key=lambda c: c.value,
                                            reverse=True)[:2])
-    else:
-        return None
+    return None
 
 
 def _in_a_row(values: list[Value]) -> bool:
@@ -225,6 +224,8 @@ def straight_flush(cards: list[Card]) -> [None, list[Card]]:
         if _in_a_row(current_range) and (f := flush(range_cards)):
             return f
 
+    return None
+
 
 def royal_flush(cards: list[Card]) -> [None, list[Card]]:
     _straight_flush = straight_flush(cards)
@@ -260,6 +261,7 @@ def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
         found = combination.check(cards)
         if found:
             return combination, found
+    raise RuntimeError("No best hand found")
 
 
 if __name__ == '__main__':

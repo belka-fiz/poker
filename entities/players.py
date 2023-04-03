@@ -73,8 +73,8 @@ class Player:
         """must be used by the game"""
         if len(self.__hand) == 2:
             raise errors.TooManyCards('The hand is full')
-        else:
-            self.__hand.append(card)
+
+        self.__hand.append(card)
 
     @property
     def hand(self):
@@ -123,9 +123,11 @@ class Player:
         if action not in self.available_actions:
             error_msg = f'Decision {decision} is not available. Must choose from: {self.available_actions}'
             raise errors.UnavailableDecision(error_msg)
+
         if decision.size < 0:
             raise errors.NegativeBetError
-        elif action == Bet.CHECK:
+
+        if action == Bet.CHECK:
             self.decision.action = Bet.CHECK
         elif action == Bet.FOLD:
             self.decision.action = Bet.FOLD
@@ -137,6 +139,7 @@ class Player:
         elif action == Bet.RAISE:
             if decision.size < self.requested_bet:
                 raise errors.TooSmallBetError
+
             self._bet(decision.size)
             if not self.__all_in:
                 if decision.size == self.requested_bet:
@@ -178,8 +181,10 @@ class Account:
     def join_game(self, game, buy_in):
         if game in self.games.keys():
             raise errors.AlreadyInTheGame
+
         if buy_in > self._chips_amount:
             raise errors.NotEnoughMoney
+
         player = Player(buy_in, name=self.name)
         self._chips_amount -= buy_in
         self.games |= {game: player}
@@ -187,7 +192,7 @@ class Account:
     def leave_game(self, game):
         if game not in self.games:
             raise errors.GameNotFoundError
-        else:
-            player: Player = self.games[game]
-            self._chips_amount += player.stack
-            self.games.pop(game)
+
+        player: Player = self.games[game]
+        self._chips_amount += player.stack
+        self.games.pop(game)

@@ -2,7 +2,8 @@ from secrets import SystemRandom
 from time import time
 from typing import Iterable
 
-from ai.ai import possible_boards, all_possible_sets_to_open, possible_board_according_to_hand, possible_competitors_hands
+from ai.ai import possible_boards, all_possible_sets_to_open, possible_board_according_to_hand,\
+    possible_competitors_hands
 from entities.cards import Card, Deck
 
 random = SystemRandom()
@@ -102,9 +103,6 @@ def several_hands(num: int = 2):
 
 def main():
     start = time()
-    # hands_calc()
-    # time_comparison()
-    # several_hands()
     print(f"The game took {(time()-start):.4f} seconds")
 
 
