@@ -149,7 +149,7 @@ class StageBetAI:
     def will_i_win_by_weight(self):
         """
         Our assumption if we are winning or not
-        True if we have good chances(of bluffing)
+        True if we have good chances(or bluffing)
         False if chances are pretty bad
         None if we are not sure
         """
