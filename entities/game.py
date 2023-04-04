@@ -71,4 +71,3 @@ class Game:
     def end_game(self):
         """Logic for game ending"""
         # do I need it?
-        pass

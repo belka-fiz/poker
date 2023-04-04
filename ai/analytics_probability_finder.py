@@ -50,22 +50,27 @@ class ProbabilityCounter:
 
     @cached_property
     def suited_count_in_known(self) -> dict:
+        """shows how many suited cards are present in the known cards"""
         return cards_by_suit(self.known_cards)
 
     @cached_property
     def suited_count_on_board(self) -> dict:
+        """shows how many suited cards are present in the known community cards"""
         return cards_by_suit(self.board)
 
     @cached_property
     def board_cards_by_range(self) -> dict:
+        """Shows how many cards in each range there are on the board"""
         return cards_in_ranges(self.board)
 
     @cached_property
     def known_cards_by_range(self) -> dict:
+        """Shows how many cards in each range there are in the known cards"""
         return cards_in_ranges(self.known_cards)
 
     @cached_property
     def pocket_one_card_probability(self) -> dict:
+        """Shows the probability of getting a card of each value from deck"""
         return {value: (4 - self.duplicates_in_known[value])/self.cards_left for value in VALUES}
 
     @cached_property
@@ -81,6 +86,7 @@ class ProbabilityCounter:
 
     @cached_property
     def pocket_pair_probability(self) -> dict:
+        """Shows the probability of getting a pair of each value"""
         pair_probability = {}
         for value in VALUES:
             count = self.duplicates_in_known[value]
@@ -92,9 +98,11 @@ class ProbabilityCounter:
 
     @cached_property
     def pocket_suit_probability(self) -> dict:
+        """Probabilities that an opponent gets at least one card for each suit"""
         return {suit: (13 - self.suited_count_in_known[suit]) / self.cards_left for suit in SUITS}
 
     def several_cards_probability_by_value(self, values: [list[Value], tuple[Value]]) -> float:
+        """Probability of getting several cards with exact values"""
         _cards_left = self.cards_left
         probability = 1
         for value in values:
@@ -107,6 +115,7 @@ class ProbabilityCounter:
         return probability
 
     def several_cards_probability_by_suit(self, suit: Suit, count: int) -> float:
+        """Probability of getting several cards of the exact suit"""
         _cards_left = self.cards_left
         _suit_cards_used = self.suited_count_in_known[suit]
         probability = 1
@@ -117,6 +126,7 @@ class ProbabilityCounter:
         return probability
 
     def pocket_suited_cards_probability(self) -> dict:
+        """Probability that an opponent has suited cards"""
         suit_probability = {}
         for suit in SUITS:
             suit_count = self.suited_count_in_known[suit]
@@ -124,6 +134,7 @@ class ProbabilityCounter:
         return suit_probability
 
     def straight_possibilities(self) -> dict:
+        """probabilities of getting the straight for each range"""
         _straight_possibilities = {}
         for _range in CARD_RANGES:
             if (5 - self.board_cards_by_range[_range]) <= 2 + (5 - len(self.board)):
@@ -134,6 +145,7 @@ class ProbabilityCounter:
         return _straight_possibilities
 
     def flush_possibilities(self) -> dict:
+        """Probabilities to get flush for each suit"""
         _flush_possibilities = {}
         for suit in SUITS:
             cards_left = (5 - self.suited_count_on_board[suit])
