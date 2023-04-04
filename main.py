@@ -11,7 +11,15 @@ from errors import errors
 random = SystemRandom()
 
 
-def start_a_game(number_of_players: int, init_chips: float, blind: float, player_name: str):
+def start_a_game(number_of_players: int, init_chips: float, blind: float, player_name: str) -> None:
+    """
+    Create a new game with pre-defined number of AI players
+    :param number_of_players: number of total players, including human
+    :param init_chips: The size of each player's stack at the start
+    :param blind: The initial blinds size
+    :param player_name: Name of a human player
+    :return: None
+    """
     # create AI players and assign uniq names to them
     names = NAMES.copy()
     players: list[Union[Player, AI]]
@@ -34,6 +42,10 @@ def start_a_game(number_of_players: int, init_chips: float, blind: float, player
 
 
 def main():
+    """
+    Start a CLI game for 1 human and a configurable number of AI players
+    :return: None
+    """
     player_name = ask_for_str_input()
     quick_game = ask_for_bool_input('Would you like to start a quick game?')
     # create a single-player game with default params

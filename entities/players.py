@@ -6,6 +6,11 @@ from errors import errors
 
 
 class Player:
+    """
+    Player entity.
+    Implements player's pocket_cards and bets making
+    """
+
     def __init__(self, start_stack: float, is_ai: bool = True, name: str = ''):
         self.__stack = start_stack
         self.__hand: list[Card] = []
@@ -30,6 +35,7 @@ class Player:
         self.requested_bet = 0
 
     def new_stage(self):
+        """reset just necessary things for a new game stage"""
         self._reset_status()
 
     def new_game_round(self):
@@ -42,6 +48,7 @@ class Player:
 
     # bets
     def _bet(self, amount):
+        """Place a bet"""
         if amount:
             diff = amount - self.decision.size
             if diff >= self.__stack:
@@ -53,6 +60,7 @@ class Player:
                 self.__stack = 0
 
     def post_blind(self, amount):
+        """Place a blind without marking player as having decided"""
         self._bet(amount)
         if self.__all_in:
             self._made_decision = True
@@ -61,22 +69,24 @@ class Player:
 
     @property
     def is_all_in(self):
+        """Shows if the player went all-in in the current round"""
         return self.__all_in
 
     # cards
     def add_card(self, card):
-        """must be used by the game"""
+        """Add a pocket card. Must be used by the game only"""
         if len(self.__hand) == 2:
             raise errors.TooManyCards('The hand is full')
-        else:
-            self.__hand.append(card)
+
+        self.__hand.append(card)
 
     @property
     def hand(self):
-        # todo think about the security
+        """Player's pocket cards"""
         return tuple(self.__hand)
 
     def get_status(self):
+        """Shows general player's stats"""
         data = {
             'name': self.name,
             'in_game': self._in_the_game,
@@ -90,17 +100,21 @@ class Player:
 
     @property
     def is_active(self):
+        """Shows whether player has not folded yet"""
         return self._in_the_game
 
     # decisions
     @property
     def made_decision(self):
+        """Shows whether player has already made a requested decision"""
         return self._made_decision
 
     def reset_decision(self):
+        """Mark player as not having decided"""
         self._made_decision = False
 
     def ask_for_a_decision(self, requested_bet=0.0):
+        """Update available actions for player to make"""
         if not requested_bet or requested_bet == self.decision.size:
             self.available_actions = [Bet.CHECK, Bet.FOLD, Bet.RAISE, Bet.ALL_IN]
         elif requested_bet < self.__stack + self.decision.size:
@@ -118,9 +132,11 @@ class Player:
         if action not in self.available_actions:
             error_msg = f'Decision {decision} is not available. Must choose from: {self.available_actions}'
             raise errors.UnavailableDecision(error_msg)
+
         if decision.size < 0:
             raise errors.NegativeBetError
-        elif action == Bet.CHECK:
+
+        if action == Bet.CHECK:
             self.decision.action = Bet.CHECK
         elif action == Bet.FOLD:
             self.decision.action = Bet.FOLD
@@ -132,6 +148,7 @@ class Player:
         elif action == Bet.RAISE:
             if decision.size < self.requested_bet:
                 raise errors.TooSmallBetError
+
             self._bet(decision.size)
             if not self.__all_in:
                 if decision.size == self.requested_bet:
@@ -147,41 +164,50 @@ class Player:
 
     # money
     def add_money(self, amount):
-        """when player buys credit or wins"""
+        """When player buys credit or wins"""
         self.__stack += amount
 
     @property
     def stack(self):
+        """Show player's stack"""
         return self.__stack
 
     @property
     def is_ai(self) -> bool:
+        """Shows whether player is AI"""
         return self.__is_ai
 
 
 class Account:
-    """account, statistics, an interface to login, join games and buy stack"""
+    """Account, statistics, an interface to login, join games and buy stack"""
+
     def __init__(self, name):
         self.name = name
         self._chips_amount: float = 0.0
         self.games: dict[Any: Player] = {}
 
     def buy_chips(self, amount: float):
+        """Add the amount of chips to the account"""
         self._chips_amount += amount
 
     def join_game(self, game, buy_in):
+        """Join a game with the amount of chips"""
         if game in self.games.keys():
             raise errors.AlreadyInTheGame
+
         if buy_in > self._chips_amount:
             raise errors.NotEnoughMoney
+
         player = Player(buy_in, name=self.name)
         self._chips_amount -= buy_in
         self.games |= {game: player}
+        return player
 
     def leave_game(self, game):
+        """leave the game passing chips from the player's stack to the account"""
         if game not in self.games:
             raise errors.GameNotFoundError
-        else:
-            player: Player = self.games[game]
-            self._chips_amount += player.stack
-            self.games.pop(game)
+
+        player: Player = self.games[game]
+        self._chips_amount += player.stack
+        self.games.pop(game)
