@@ -43,6 +43,7 @@ def all_possible_sets_to_open(
 
 @lru_cache(128)
 def possible_boards(board: tuple[Card]) -> set[frozenset[Card]]:
+    """Find all cards that can complete the board if we wouldn't know our own pocket cards"""
     deck_rest = Deck.all_cards() - set(board)
     if len(board) == 5:
         return set()
@@ -58,6 +59,7 @@ def possible_boards(board: tuple[Card]) -> set[frozenset[Card]]:
 
 
 def possible_board_according_to_hand(board: tuple[Card], hand: tuple[Card]) -> set[frozenset[Card]]:
+    """All possible boards knowing own hand"""
     possible_rest = possible_boards(board)
     result = possible_rest.copy()
     for _result in possible_rest:
@@ -69,6 +71,7 @@ def possible_board_according_to_hand(board: tuple[Card], hand: tuple[Card]) -> s
 
 
 def possible_competitors_sets(board: tuple[Card], hand: tuple[Card]) -> set[frozenset[Card]]:
+    """All possible competitors hands(TBC)"""
     possible_rest = possible_board_according_to_hand(board, hand)
     result = possible_rest.copy()
     # todo add possible hands
@@ -117,6 +120,7 @@ class StageBetAI:
         self.bluff: bool = False
 
     def _guess_my_chances(self) -> dict[Combination: float]:
+        """Chances of getting each combination"""
         # todo add combination's kicker
         absolute_chances = {cmb: 0 for cmb in COMBINATIONS}
         if len(self.known_cards) == 7:
@@ -131,6 +135,7 @@ class StageBetAI:
         return relative_chances
 
     def _guess_opponents_chances(self) -> dict[Combination: float]:
+        """Chances for an opponent to get each combination"""
         # todo add combination's kicker
         absolute_chances = {cmb: 0 for cmb in COMBINATIONS}
         for possible_card_set in self.possible_competitors_cards:
@@ -142,6 +147,12 @@ class StageBetAI:
 
     @lru_cache(128)
     def will_i_win_by_weight(self):
+        """
+        Our assumption if we are winning or not
+        True if we have good chances(of bluffing)
+        False if chances are pretty bad
+        None if we are not sure
+        """
         if self.weight_ratio > 1:
             return True
 
@@ -154,11 +165,15 @@ class StageBetAI:
         return None
 
     def comfort_bet(self) -> float:
+        """Defining the bet we are ready to call or raise"""
         if self.bluff:
             return random.randint(1, 3) * self.blind
         return round(self.weight_ratio ** 2) * self.blind
 
     def should_i_bet(self, max_bet) -> list[Bet]:
+        """Defining what action we are ready to perform according to:
+        - Our comfortable bet and the current max bet
+        - Our guess about the chances to win"""
         if self.comfort_bet() * 3 < max_bet:
             return [Bet.FOLD]
 
@@ -174,6 +189,7 @@ class StageBetAI:
         return []
 
     def how_much_to_bet(self, max_bet) -> float:
+        """Deciding about the size of the raise using random"""
         bet = self.comfort_bet() * random.randint(0, 3)
         return min(max(bet, max_bet), self.player.stack)
 
@@ -191,27 +207,32 @@ class PreFlopDecider:
         self._weight = self.weight()
 
     def is_pair(self) -> bool:
+        """if we have a pocket pair"""
         return self.__hand[0].value == self.__hand[1].value
 
     def dist_quotient(self) -> float:
+        """How far the pocket cards are from each other"""
         distance = abs(self.__hand[0].value.order - self.__hand[1].value.order)
         return 1 - min(distance, 4) / 20
 
     def suit_quotient(self) -> float:
+        """Are the pocket cards suited"""
         same_suit = self.__hand[0].suit == self.__hand[1].suit
         return 0.8 + 0.2 * same_suit
 
     def highness(self) -> float:
+        """quotient for the highness of the pocket cards"""
         return max(self.__hand).value.order / max(VALUES).order
 
     def weight(self) -> float:
+        """The overall weight of the pocket cards according to the quotients above"""
         if self.is_pair():
             return self.highness()
 
         return 0.8 * self.highness() * self.dist_quotient() * self.suit_quotient()
 
     def decision(self) -> list[Bet]:
-        # print(f"Deciding about preflop. Hand: {self.__hand}, weight: {self._weight:.3f}")
+        """Preffered actions according to the weight"""
         if self._weight > 0.7:
             return [Bet.RAISE, Bet.CALL, Bet.ALL_IN]
 
@@ -221,6 +242,7 @@ class PreFlopDecider:
         return [Bet.CHECK, Bet.FOLD]
 
     def how_much_to_bet(self, blind, current_bet):
+        """The size of the bet according to the weight"""
         if self._weight > 0.8:
             bet = 3 * blind
         elif self._weight > 0.6:
@@ -245,6 +267,7 @@ class AI(Player):
         super().__init__(start_stack, is_ai=True, name=name)
 
     def make_a_move(self, board, current_max_bet, stage_index, blind_size, number_of_players_left):
+        """Calling the logic for bet decisions"""
         if stage_index == 1:
             decider = PreFlopDecider(self)
             ai_decisions = decider.decision()
@@ -277,6 +300,7 @@ class AI(Player):
 
 
 def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset[Card]]:
+    """all possible pocket cards can be found at a competitor's"""
     cards = Deck.all_cards()
     if known_cards:
         for card in known_cards:

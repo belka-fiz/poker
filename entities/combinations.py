@@ -155,7 +155,7 @@ def _in_a_row(values: list[Value]) -> bool:
 
 
 def straight(cards: list[Card]) -> [None, list[Value]]:
-    """defines if player's hand is straight. """
+    """defines if player's hand is straight"""
     if len(cards) < 5:
         return None
     _cards = list(cards)
