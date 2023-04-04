@@ -97,19 +97,24 @@ class Deck:
         self.mix()
 
     def mix(self) -> None:
+        """Shuffle the deck"""
         self._order = list(self.__cards)
         shuffle(self._order)
 
     def draw_one(self) -> Card:
+        """Deal a card to a player"""
         return self._order.pop()
 
     def hide_one(self) -> None:
+        """Hide a card from the deck without giving it to anyone"""
         self._order.pop()
 
     @property
     def cards_left(self) -> int:
+        """represents how many cards are left in the deck"""
         return len(self._order)
 
     @classmethod
     def all_cards(cls) -> set[Card]:
+        """Return all possible cards in a deck"""
         return set(cls.__cards)

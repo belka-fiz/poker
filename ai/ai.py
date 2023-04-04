@@ -177,12 +177,6 @@ class StageBetAI:
         bet = self.comfort_bet() * random.randint(0, 3)
         return min(max(bet, max_bet), self.player.stack)
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
-
 
 class PreFlopDecider:
     """

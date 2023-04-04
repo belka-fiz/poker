@@ -20,19 +20,30 @@ class Game:
         self.rounds_started = 0  # init rounds counter. Used for blinds raises
 
     def add_human_player(self, account: Account):
-        account.join_game(self, self.buy_in)
+        """Add a human player into the game, subtracting his stack from the account"""
+        player = account.join_game(self, self.buy_in)
+        self.add_player(player)
         # not used yet. Accounts are to be implemented
 
-    def add_player(self, player):
+    def add_player(self, player: Player):
+        """Add a player to the game"""
         self.players.append(player)
 
-    def remove_player(self, player):
+    def remove_player(self, player: Player):
+        """remove a player from the game"""
         self.players.pop(self.players.index(player))
 
     def raise_blind(self):
+        """Double blinds once in a configured number of rounds"""
         self.blind = self.initial_blind * 2 ** (self.rounds_started // self.increase_blinds)
 
-    def new_round(self):
+    def new_round(self) -> Round:
+        """
+        Start a new round of the game, with:
+        - kicking bankrupt players
+        - increasing blinds if necessary
+        - incrementing dealer's index
+        """
         # kick bankrupt players or add money for AI
         for player in self.players:
             if player.stack <= 0:
@@ -58,5 +69,6 @@ class Game:
         return new_round
 
     def end_game(self):
+        """Logic for game ending"""
         # do I need it?
         pass
