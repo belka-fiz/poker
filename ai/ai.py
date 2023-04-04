@@ -171,9 +171,11 @@ class StageBetAI:
         return round(self.weight_ratio ** 2) * self.blind
 
     def should_i_bet(self, max_bet) -> list[Bet]:
-        """Defining what action we are ready to perform according to:
+        """
+        Defining what action we are ready to perform according to:
         - Our comfortable bet and the current max bet
-        - Our guess about the chances to win"""
+        - Our guess about the chances to win
+        """
         if self.comfort_bet() * 3 < max_bet:
             return [Bet.FOLD]
 
