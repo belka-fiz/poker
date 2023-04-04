@@ -1,7 +1,7 @@
 from entities.bet import Bet, Decision
 from entities.cards import Card
-from errors.errors import UnavailableDecision, NegativeBetError, TooSmallBetError
 from entities.players import Player
+from errors.errors import UnavailableDecision, NegativeBetError, TooSmallBetError
 
 
 def text_to_bet(input_str: str) -> tuple[[Decision, None], str]:

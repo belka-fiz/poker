@@ -9,13 +9,12 @@
 from functools import lru_cache
 from secrets import SystemRandom
 
+from config import WEIGHT_QUOTIENT
 from entities.bet import Bet, Decision
 from entities.cards import Card, Deck, VALUES
 from entities.combinations import best_hand, Combination, COMBINATIONS
-from errors.errors import UnavailableDecision, TooSmallBetError
-from config import WEIGHT_QUOTIENT
 from entities.players import Player
-
+from errors.errors import UnavailableDecision, TooSmallBetError
 
 random = SystemRandom()
 
@@ -79,7 +78,7 @@ def possible_competitors_sets(board: tuple[Card], hand: tuple[Card]) -> set[froz
 def update_smallest(chances: dict[Combination: float]) -> None:
     """find the smallest combination with >0 chance and set its chances to 1"""
     for cmb in chances:
-        smaller_cmbs = COMBINATIONS[COMBINATIONS.index(cmb)+1:]
+        smaller_cmbs = COMBINATIONS[COMBINATIONS.index(cmb) + 1:]
         if len(smaller_cmbs) == 0:
             return
 
