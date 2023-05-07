@@ -1,4 +1,6 @@
-from entities.cards import Deck, Value
+import pytest
+
+from entities.cards import Deck, Value, Card, VALUES, SUITS
 
 
 def test_all_cards_hashes_are_uniq():
@@ -40,14 +42,27 @@ def test_card_values_equality():
     assert a == b
 
 
-def test_values_order():
-    pass
+@pytest.mark.parametrize(('value1', 'value2'), [(VALUES[i], VALUES[i+1]) for i in range(len(VALUES)-1)], ids=str)
+def test_values_are_ordered(value1, value2):
+    assert value1 < value2, ""
 
 
-def test_suits_do_not_make_difference_in_cards_value():
-    pass
+@pytest.mark.parametrize('value', [v for v in VALUES], ids=str)
+def test_suits_do_not_make_difference_in_cards_value(value):
+    card_1 = Card(SUITS[0], value)
+    card_2 = Card(SUITS[1], value)
+    card_3 = Card(SUITS[2], value)
+    card_4 = Card(SUITS[3], value)
+    assert card_1 == card_2 == card_3 == card_4, "Cards with the same value and different suits are not equal"
 
 
 def test_card_names():
-    """make sure the name is formed from the Value and Suit right"""
-    pass
+    """The name of card should be formed from the Value and Suit right"""
+    a = Card(SUITS[0], Value(14, 'Ace', 'A'))
+    assert str(a) == str(a.value) + str(a.suit)
+
+
+def test_card_repr():
+    """The name of card should be formed from the Value and Suit right"""
+    a = Card(SUITS[0], Value(14, 'Ace', 'A'))
+    assert repr(a) == repr(a.value) + repr(a.suit)
