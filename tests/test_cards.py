@@ -47,7 +47,7 @@ def test_values_are_ordered(value1, value2):
     assert value1 < value2, ""
 
 
-@pytest.mark.parametrize('value', [v for v in VALUES], ids=str)
+@pytest.mark.parametrize('value', VALUES, ids=str)
 def test_suits_do_not_make_difference_in_cards_value(value):
     card_1 = Card(SUITS[0], value)
     card_2 = Card(SUITS[1], value)

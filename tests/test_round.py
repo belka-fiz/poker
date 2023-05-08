@@ -14,6 +14,7 @@ def game_round() -> Round:
 @pytest.mark.usefixtures('game_round')
 class TestRoundCards:
     """Make sure cards are given in the right amount on the right stages"""
+
     def test_deck_is_reset_at_the_start_of_the_round(self, game_round):
         assert game_round.deck.cards_left == 52
 
@@ -41,7 +42,8 @@ class TestRoundCards:
 
 
 class TestBetsCollection:
-    """Make sure the bets are substracted from the players stacks and added to the pot"""
+    """Make sure the bets are subtracted from the players stacks and added to the pot"""
+
     def test_folder_is_excluded(self):
         pass
 
@@ -60,4 +62,3 @@ class TestBetsCollection:
 
 class TestWinners:
     """Make sure winners are defined right and the prize is distributed to the right people in the right amount"""
-    pass
