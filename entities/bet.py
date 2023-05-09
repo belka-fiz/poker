@@ -32,3 +32,6 @@ class Decision:
 
     def __hash__(self):
         return self.size + hash(self.action)
+
+    def __repr__(self):
+        return f"{repr(self.action)} {str(self.size)}"

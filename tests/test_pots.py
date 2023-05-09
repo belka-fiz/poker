@@ -41,12 +41,15 @@ def test_add_zero_chips(players, pot):
     assert pot._contributions[p1] == 0
 
 
-def test_remove_player(players, pot):
-    p2 = players[1]
-    pot.remove_player(p2)
-    assert p2 not in pot.players
-    assert p2 not in pot.get_active_players()
-    assert p2 in pot._contributions.keys()
+def test_remove_player(players):
+    from entities.bet import Bet, Decision
+    p3 = Player(100, name='Folder')
+    test_pot = Pot(players + [p3])
+    p3.ask_for_a_decision(100)
+    p3.decide(Decision(Bet.FOLD))
+    assert p3 not in test_pot.players
+    assert p3 not in test_pot.get_active_players()
+    assert p3 in test_pot._contributions.keys()
 
 
 def test_get_active_players(players, pot):
