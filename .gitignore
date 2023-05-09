@@ -1,2 +1,9 @@
 /allure/
-/env/
+/env*/
+*/__pycache__/
+*.pytest_cache
+*.pyc
+.idea
+arch.txt
+chat_gpt.txt
+draft.txt
