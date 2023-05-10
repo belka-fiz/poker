@@ -1,14 +1,10 @@
-from pprint import PrettyPrinter
 from typing import Iterable, Union
 
-from ai.ai import AI
-from controller.cli import game_cli_action
+from common.event import post_event, EventType
 from entities.cards import Card, Deck
 from entities.combinations import Combination, best_hand
 from entities.players import Player
 from entities.pot import Pot
-
-pp = PrettyPrinter(indent=2, sort_dicts=False)
 
 
 class Round:
@@ -32,13 +28,13 @@ class Round:
 
     def __init__(self, players: list[Player], dealer_index: int, blind_size: float, debug: bool = False):
         """Initialize the game"""
-        self.players: list[Union[Player, AI]] = players[dealer_index + 1:] + players[:dealer_index + 1]
+        self.players: list[Union[Player]] = players[dealer_index + 1:] + players[:dealer_index + 1]
         self.blind_size = blind_size
         self.debug = debug
 
         self.deck = Deck()
         self._board: list[Card] = []
-        self._stage_index = 0
+        self.stage_index = 0
         self.pot: Pot = Pot(self.players)
         self.rating = []
 
@@ -58,18 +54,17 @@ class Round:
 
     def new_stage(self):
         """New cards are dealt, players make their bets"""
-        self._stage_index += 1
-        self._deal_board(self.NUMBER_OF_CARDS[self._stage_index])
-        print(f"\nThe board: {self.board}, the pot: {self.pot.pot_size}")  # todo replace with log OR view call
-        for player in self.active_players:  # reset each player's status
-            player.new_stage()
+        self.stage_index += 1
+        self._deal_board(self.NUMBER_OF_CARDS[self.stage_index])
+
+        post_event(EventType.NEW_STAGE, self.board, self.pot)
 
         # post blinds if pre-flop
-        if self._stage_index == 1:
-            for i in range(2):
+        if self.stage_index == 1:
+            for i, player in enumerate(self.active_players[:2]):
                 amount = self.blind_size / 2 * (1 + i)
-                self.active_players[i].post_blind(amount)
-                print(self.active_players[i].get_reduced_status())  # todo replace with log or view call
+                player.post_blind(amount)
+                post_event(EventType.PLAYER_MOVED, player)
             if not self.debug:
                 self._bets_round(self.players[1])
         elif not self.debug:
@@ -77,13 +72,13 @@ class Round:
 
         if not self.debug:
             # find winners if necessary or proceed to the next stage
-            if self._number_of_players_left == 1 or self._stage_index == 4:
+            if self._number_of_players_left == 1 or self.stage_index == 4:
                 self._end()
             else:
                 self.new_stage()
 
     @property
-    def active_players(self) -> list[Player, AI]:
+    def active_players(self) -> list[Player]:
         """Provides the list of players who haven't folded"""
         return [player for player in self.players if player.is_active]
 
@@ -105,14 +100,14 @@ class Round:
             index = -1
         return self.active_players[index + 1:] + self.active_players[:index + 1]
 
-    def _turns_queue(self, last_raiser: Player) -> Iterable[Union[Player, AI]]:
+    def _turns_queue(self, last_raiser: Player) -> Iterable[Union[Player]]:
         """get the next player to move"""
         while not_decided := [player for player in self._update_queue(last_raiser) if not player.made_decision]:
             if len([player for player in self.active_players if not player.is_all_in]) == 1 and not self.max_bet:
                 break
             yield not_decided[0]
 
-    def _bets_round(self, last_raiser: [Player, AI] = None):
+    def _bets_round(self, last_raiser: [Player] = None):
         """cycle through active players and get players' moves"""
         # reset each player's decision except the last raiser and the ones who are all-in
         for player in self.active_players:
@@ -122,17 +117,10 @@ class Round:
         # cycle through players and ask for a decision
         for player in self._turns_queue(last_raiser):
             current_max_bet = self.max_bet
-            player.ask_for_a_decision(current_max_bet)
-            if isinstance(player, AI):
-                player.make_a_move(self.board,
-                                   current_max_bet,
-                                   self._stage_index,
-                                   self.blind_size,
-                                   self._number_of_players_left)
-            else:
-                game_cli_action(player, self._board, current_max_bet)
+            post_event(EventType.PLAYER_PREPARE_MOVE, player, current_max_bet)
+            post_event(EventType.PLAYER_MAKE_MOVE, player, self)
+            post_event(EventType.PLAYER_MOVED, player)
 
-            print(player.get_reduced_status())  # todo replace with log or view call
             if player.decision.size > current_max_bet:
                 last_raiser = player
                 self._bets_round(last_raiser)
@@ -159,7 +147,7 @@ class Round:
             winner = self.active_players[0]
             self.rating = [(None, [winner])]
         else:
-            self._stage_index = 5
+            self.stage_index = 5
 
             # calculate each active player's combination
             players_combinations: dict[Player: tuple]
@@ -180,29 +168,16 @@ class Round:
         self.pot.distribute(self.rating)
         self.pot.pay_wins()
 
-        # todo replace print with log or view call
-        self.print_winners()
-        pp.pprint(self.end_stats())
-        print()
+        post_event(EventType.WINNERS_CALCULATED, self)
+        post_event(EventType.ROUND_END, self)
+
         for player in self.players:
             player.new_game_round()
-
-    def print_winners(self):
-        """Show players' hands if it's the showdown and highlight the winner"""
-        # todo replace the whole method with log or view call
-        if len(self.active_players) > 1:
-            print("\nPlayers' hands:")
-            pp.pprint({player: player.hand for player in self.active_players})
-        print("\nRound rating:")
-        pp.pprint(self.rating)
-        print("\nPots distribution:")
-        pp.pprint(self.pot.winners)
-        print('\n')
 
     def end_stats(self):
         """Game stage closing stats: the stage, the board and the players' end stack"""
         return {
-            'stage': self.STAGES[self._stage_index],
+            'stage': self.STAGES[self.stage_index],
             'board': self.board,
             'players': [{player.name: player.stack} for player in self.players]
         }
@@ -210,7 +185,7 @@ class Round:
     def get_status(self):
         """return current game stage, players statuses, the bank and the board"""
         return {
-            'stage': self.STAGES[self._stage_index],
+            'stage': self.STAGES[self.stage_index],
             'board': self.board,
             'pot': self.pot.pot_size,
             'players': [player.get_status() for player in self.players]

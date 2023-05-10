@@ -1,7 +1,8 @@
 from typing import Any, Callable, Optional
 
-from entities.cards import Card
+from common.event import EventType, subscribe
 from entities.bet import Bet, Decision
+from entities.cards import Card
 from errors import errors
 
 
@@ -243,3 +244,7 @@ class Account:
         player: Player = self.games[game]
         self._chips_amount += player.stack
         self.games.pop(game)
+
+
+subscribe(EventType.PLAYER_PREPARE_MOVE, Player.ask_for_a_decision)
+subscribe(EventType.PLAYER_MOVED, Player.get_reduced_status)
