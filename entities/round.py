@@ -60,7 +60,7 @@ class Round:
         """New cards are dealt, players make their bets"""
         self._stage_index += 1
         self._deal_board(self.NUMBER_OF_CARDS[self._stage_index])
-        print(f"The board: {self.board}, the pot: {self.pot.pot_size}")  # todo replace with log OR view call
+        print(f"\nThe board: {self.board}, the pot: {self.pot.pot_size}")  # todo replace with log OR view call
         for player in self.active_players:  # reset each player's status
             player.new_stage()
 
@@ -182,7 +182,7 @@ class Round:
 
         # todo replace print with log or view call
         self.print_winners()
-        pp.pprint(self.get_status())
+        pp.pprint(self.end_stats())
         print()
         for player in self.players:
             player.new_game_round()
@@ -199,11 +199,19 @@ class Round:
         pp.pprint(self.pot.winners)
         print('\n')
 
+    def end_stats(self):
+        """Game stage closing stats: the stage, the board and the players' end stack"""
+        return {
+            'stage': self.STAGES[self._stage_index],
+            'board': self.board,
+            'players': [{player.name: player.stack} for player in self.players]
+        }
+
     def get_status(self):
         """return current game stage, players statuses, the bank and the board"""
         return {
             'stage': self.STAGES[self._stage_index],
             'board': self.board,
             'pot': self.pot.pot_size,
-            'players': [player.get_reduced_status() for player in self.players]
+            'players': [player.get_status() for player in self.players]
         }
