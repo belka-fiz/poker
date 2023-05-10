@@ -303,6 +303,7 @@ class AI(Player):
             self.decide(Decision(action, decider.how_much_to_bet(current_max_bet)))
 
     def make_a_move_by_round(self, game_round: Round):
+        """adapter method for calling make a move providing round as a parameter"""
         if self.is_ai:
             self.make_a_move(
                 game_round.board,

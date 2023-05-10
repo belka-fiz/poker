@@ -5,6 +5,7 @@ from typing import Callable
 
 class EventType(Enum):
     """Store all possible types of events"""
+
     PLAYER_PREPARE_MOVE = auto()  # noqa
     PLAYER_MAKE_MOVE = auto()  # noqa
     PLAYER_MOVED = auto()  # noqa
@@ -27,7 +28,3 @@ def post_event(event_type: EventType, *args, **kwargs):
         return
     for fn in subscribers[event_type]:
         fn(*args, **kwargs)
-
-
-if __name__ == '__main__':
-    pass

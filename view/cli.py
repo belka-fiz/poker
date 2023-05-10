@@ -6,6 +6,8 @@ from .interface import View
 
 
 class CliView(View):
+    """Implementation of view interface for command line interface"""
+
     def __init__(self):
         self.pp = PrettyPrinter(indent=2, sort_dicts=False)
 
