@@ -23,6 +23,9 @@ class Player:
         self.name: str = name
         self.decision: Decision = Decision(Bet.NOT_DECIDED)
 
+    def __repr__(self):
+        return f"{self.name}({'AI' if self.is_ai else 'human'})"
+
     # resets
     def _reset_status(self):
         """reset bet status except all_in"""
@@ -97,6 +100,14 @@ class Player:
             'made_decision': self._made_decision
         }
         return data
+
+    def get_reduced_status(self) -> dict:
+        """Shows less data in more readable way"""
+        return {
+            "name": self.name,
+            "last_action": self.decision,
+            "money": self.stack
+        }
 
     @property
     def is_active(self):

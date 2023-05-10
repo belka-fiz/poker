@@ -9,19 +9,27 @@ class SidePot(NamedTuple):
     players: list[Player]
     size: float
 
+    def __hash__(self):
+        return id(self.players)
+
 
 class Pot:
     """Class that stores players contributions to the pot and implements the prize distribution"""
 
     def __init__(self, players: list[Player]):
-        self.players = players.copy()
-        self._contributions = {player: 0.0 for player in self.players}
+        self._players = players.copy()
+        self._contributions = {player: 0.0 for player in self._players}
         self.pot_size = 0.0
         self.pots: list[SidePot] = []
+        self.winners: dict[SidePot: dict[Player: float]] = {}
+
+    @property
+    def players(self):
+        return [player for player in self._players if player.is_active]
 
     def remove_player(self, player: Player):
         """remove player from the challengers"""
-        self.players.remove(player)
+        self._players.remove(player)
         # we do not remove player's contribution to make pot recalculation easier
 
     def add_chips(self, player: Player, amount: float):
@@ -37,9 +45,12 @@ class Pot:
         """unite side pots with the same number of players"""
         # remove folded players from pots
         for side_pot in self.pots:
+            players_to_remove: list[Player] = []
             for player in side_pot.players:
                 if player not in self.players:
-                    side_pot.players.remove(player)
+                    players_to_remove.append(player)
+            for player in players_to_remove:
+                side_pot.players.remove(player)
 
         # unite the pots with the same number of players
         pots_by_players_num = {num: [] for num in {len(pot.players) for pot in self.pots}}
@@ -52,7 +63,7 @@ class Pot:
     def recalculate_pots(self):
         """calculate side pots according to players' contributions to the pot"""
         self.pots = []
-        contributions = sorted({size for _, size in self._contributions.items()})
+        contributions = sorted({size for _, size in self._contributions.items() if size > 0})
         if len(contributions) == 1:
             self.pots = [SidePot(self.players, self.pot_size)]
             return
@@ -67,25 +78,32 @@ class Pot:
             last_contribution = contribution
         self.unite_pots()
 
+    def pay_wins(self):
+        """Method to pay winners separately from defining the sizes of wins"""
+        for _, winners_list in self.winners.items():
+            for winner, prize in winners_list.items():
+                winner.add_money(prize)
+
     def distribute(self, rating: list[tuple[tuple, list[Player]]]):
         """
         pay prize money to the winners of each pot
         there may be multiple winners in multiple pots
         """
-        # todo save or log the list of winners and their prizes
         for side_pot in self.pots:
+            # case 1 player in the pot - make him winner
             if len(side_pot.players) == 1:
-                side_pot.players[0].add_money(side_pot.size)
-            else:
-                side_pot_winners: list[Player] = []
-                for _, players in rating:
-                    for player in players:
-                        if player in side_pot.players:
-                            side_pot_winners.append(player)
+                self.winners[side_pot] = {side_pot.players[0]: side_pot.size}
+                continue
 
-                    if side_pot_winners:
-                        break
+            # case multiple players in the pot
+            side_pot_winners: list[Player] = []
+            for _, players in rating:
+                for player in players:
+                    if player in side_pot.players:
+                        side_pot_winners.append(player)
+                if side_pot_winners:
+                    break
 
-                prize = side_pot.size / len(side_pot_winners)
-                for winner in side_pot_winners:
-                    winner.add_money(prize)
+            prize = side_pot.size / len(side_pot_winners)
+            for _winner in side_pot_winners:
+                self.winners[side_pot] = {_winner: prize}

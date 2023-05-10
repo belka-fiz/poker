@@ -1,3 +1,4 @@
+from pprint import PrettyPrinter
 from typing import Iterable, Union
 
 from ai.ai import AI
@@ -6,6 +7,8 @@ from entities.cards import Card, Deck
 from entities.combinations import Combination, best_hand
 from entities.players import Player
 from entities.pot import Pot
+
+pp = PrettyPrinter(indent=2, sort_dicts=False)
 
 
 class Round:
@@ -57,7 +60,7 @@ class Round:
         """New cards are dealt, players make their bets"""
         self._stage_index += 1
         self._deal_board(self.NUMBER_OF_CARDS[self._stage_index])
-        print(f"The board: {self.board}, the pot: {self.pot.pot_size}")  # todo replace with log OR view call
+        print(f"\nThe board: {self.board}, the pot: {self.pot.pot_size}")  # todo replace with log OR view call
         for player in self.active_players:  # reset each player's status
             player.new_stage()
 
@@ -66,7 +69,7 @@ class Round:
             for i in range(2):
                 amount = self.blind_size / 2 * (1 + i)
                 self.active_players[i].post_blind(amount)
-                print(self.active_players[i].get_status())  # todo replace with log of the last move
+                print(self.active_players[i].get_reduced_status())  # todo replace with log or view call
             if not self.debug:
                 self._bets_round(self.players[1])
         elif not self.debug:
@@ -129,7 +132,7 @@ class Round:
             else:
                 game_cli_action(player, self._board, current_max_bet)
 
-            print(player.get_status())  # todo replace with log or view call
+            print(player.get_reduced_status())  # todo replace with log or view call
             if player.decision.size > current_max_bet:
                 last_raiser = player
                 self._bets_round(last_raiser)
@@ -152,8 +155,6 @@ class Round:
 
     def _find_winners(self):
         """Determine the rating of players' combinations and the list of players having each of them"""
-        print(f"\nCurrent_players:\n{[p.name for p in self.active_players]},\npot: {self.pot.pot_size}")
-        # todo replace print with log or view call
         if self._number_of_players_left == 1:
             winner = self.active_players[0]
             self.rating = [(None, [winner])]
@@ -177,25 +178,34 @@ class Round:
         self.pot.recalculate_pots()
         self._find_winners()
         self.pot.distribute(self.rating)
+        self.pot.pay_wins()
+
         # todo replace print with log or view call
-        print(*self.get_status().items(), sep='\n')
         self.print_winners()
+        pp.pprint(self.end_stats())
+        print()
         for player in self.players:
             player.new_game_round()
 
     def print_winners(self):
         """Show players' hands if it's the showdown and highlight the winner"""
         # todo replace the whole method with log or view call
-        if len(self.active_players) == 1:
-            print(f"{self.active_players[0].name} is the winner\n")
-        else:
-            print(f"The board was {self.board}")
-            for player in self.active_players:
-                print(f"{player.name}: {player.hand}")
-                print(best_hand(self.board + player.hand))
-                if player in self.rating[0][1]:
-                    print('Player is winner')
-            print('\n')
+        if len(self.active_players) > 1:
+            print("\nPlayers' hands:")
+            pp.pprint({player: player.hand for player in self.active_players})
+        print("\nRound rating:")
+        pp.pprint(self.rating)
+        print("\nPots distribution:")
+        pp.pprint(self.pot.winners)
+        print('\n')
+
+    def end_stats(self):
+        """Game stage closing stats: the stage, the board and the players' end stack"""
+        return {
+            'stage': self.STAGES[self._stage_index],
+            'board': self.board,
+            'players': [{player.name: player.stack} for player in self.players]
+        }
 
     def get_status(self):
         """return current game stage, players statuses, the bank and the board"""
