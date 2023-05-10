@@ -32,6 +32,7 @@ class View(ABC):
 
 
 def subscribe_view(view: View):
+    """subscribe a view to all necessary game events"""
     _view = view()  # noqa
     subscribe(EventType.PLAYER_MOVED, _view.last_move)
     subscribe(EventType.NEW_STAGE, _view.print_board)
