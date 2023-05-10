@@ -1,4 +1,4 @@
-from typing import Any, Callable
+from typing import Any, Callable, Optional
 
 from entities.cards import Card
 from entities.bet import Bet, Decision
@@ -166,14 +166,15 @@ class Player:
     def process_all_in(self):
         self._bet(self.__stack + self.decision.size)
 
-    def bet_process_dict(self) -> dict[Bet: Callable]:
-        return {
+    def process_bet(self, action: Bet, *args: float) -> None:
+        functions: dict[Bet: Callable[[Bet, Optional[float]], None]] = {
             Bet.CHECK: self.process_check,
             Bet.FOLD: self.process_fold,
             Bet.CALL: self.process_call,
             Bet.RAISE: self.process_raise,
             Bet.ALL_IN: self.process_all_in
         }
+        functions[action](*args)  # noqa
 
     def decide(self, decision: Decision):
         """An interface for bet processing"""
@@ -189,7 +190,7 @@ class Player:
             args = [decision.size]
         else:
             args = []
-        self.bet_process_dict()[action](*args)  # noqa
+        self.process_bet(action, *args)
 
         self._made_decision = True
 
