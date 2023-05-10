@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, Callable
 
 from entities.cards import Card
 from entities.bet import Bet, Decision
@@ -137,8 +137,46 @@ class Player:
         self.requested_bet = requested_bet
         return self.available_actions
 
+    def process_check(self):
+        self.decision.action = Bet.CHECK
+
+    def process_fold(self):
+        self.decision.action = Bet.FOLD
+        self.__hand = []
+        self._in_the_game = False
+
+    def process_call(self):
+        self._bet(self.requested_bet)
+        self.decision = Decision(Bet.CALL, self.requested_bet)
+
+    def process_raise(self, amount: float):
+        if amount < self.requested_bet:
+            raise errors.TooSmallBetError
+
+        self._bet(amount)
+        if not self.__all_in:
+            if amount == self.requested_bet:
+                if self.requested_bet == 0:
+                    self.decision = Decision(Bet.CHECK)
+                else:
+                    self.decision = Decision(Bet.CALL, amount)
+            else:
+                self.decision = Decision(Bet.RAISE, amount)
+
+    def process_all_in(self):
+        self._bet(self.__stack + self.decision.size)
+
+    def bet_process_dict(self) -> dict[Bet: Callable]:
+        return {
+            Bet.CHECK: self.process_check,
+            Bet.FOLD: self.process_fold,
+            Bet.CALL: self.process_call,
+            Bet.RAISE: self.process_raise,
+            Bet.ALL_IN: self.process_all_in
+        }
+
     def decide(self, decision: Decision):
-        """an interface for bets"""
+        """An interface for bet processing"""
         action = decision.action
         if action not in self.available_actions:
             error_msg = f'Decision {decision} is not available. Must choose from: {self.available_actions}'
@@ -147,30 +185,12 @@ class Player:
         if decision.size < 0:
             raise errors.NegativeBetError
 
-        if action == Bet.CHECK:
-            self.decision.action = Bet.CHECK
-        elif action == Bet.FOLD:
-            self.decision.action = Bet.FOLD
-            self.__hand = []
-            self._in_the_game = False
-        elif action == Bet.CALL:
-            self._bet(self.requested_bet)
-            self.decision = Decision(Bet.CALL, self.requested_bet)
-        elif action == Bet.RAISE:
-            if decision.size < self.requested_bet:
-                raise errors.TooSmallBetError
+        if action == Bet.RAISE:
+            args = [decision.size]
+        else:
+            args = []
+        self.bet_process_dict()[action](*args)  # noqa
 
-            self._bet(decision.size)
-            if not self.__all_in:
-                if decision.size == self.requested_bet:
-                    if self.requested_bet != 0:
-                        self.decision = Decision(Bet.CALL, decision.size)
-                    else:
-                        self.decision = Decision(Bet.CHECK, decision.size)
-                else:
-                    self.decision = decision
-        elif action == Bet.ALL_IN:
-            self._bet(self.__stack + self.decision.size)
         self._made_decision = True
 
     # money
