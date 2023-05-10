@@ -2,11 +2,13 @@ from secrets import SystemRandom
 from typing import Union
 
 from ai.ai import AI
-from config import DEFAULT_PLAYERS_NUM, DEFAULT_BUY_IN, DEFAULT_BLIND
+from common.config import DEFAULT_PLAYERS_NUM, DEFAULT_BUY_IN, DEFAULT_BLIND
 from controller.cli import ask_for_int_input, ask_for_str_input, ask_for_bool_input
 from data.constants import NAMES
 from entities.game import Game, Player
 from errors import errors
+from view.cli import CliView
+from view.interface import subscribe_view
 
 random = SystemRandom()
 
@@ -46,6 +48,7 @@ def main():
     Start a CLI game for 1 human and a configurable number of AI players
     :return: None
     """
+    subscribe_view(CliView)
     player_name = ask_for_str_input()
     quick_game = ask_for_bool_input('Would you like to start a quick game?')
     # create a single-player game with default params

@@ -1,6 +1,8 @@
+from common.event import EventType, subscribe
 from entities.bet import Bet, Decision
 from entities.cards import Card
 from entities.players import Player
+from entities.round import Round
 from errors.errors import UnavailableDecision, NegativeBetError, TooSmallBetError
 
 
@@ -53,6 +55,12 @@ def game_cli_action(player: Player, board: [tuple[Card], list[Card]], bet_size):
             break
 
 
+def game_cli_action_by_round(player: Player, game_round: Round):
+    """Temp adapter for calling game_cli_action from events"""
+    if not player.is_ai:
+        game_cli_action(player, game_round.board, player.requested_bet)
+
+
 def ask_for_int_input(parameter: str, domain: tuple[int, int], suggested_range: tuple[int, int]) -> int:
     """
     Ask for int value for game configuration having suggested and valid ranges
@@ -91,3 +99,6 @@ def ask_for_bool_input(prompt) -> bool:
     while (val := input(bool_prompt).lower()) not in ['y', 'n']:
         continue
     return val == 'y'
+
+
+subscribe(EventType.PLAYER_MAKE_MOVE, game_cli_action_by_round)

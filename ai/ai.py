@@ -9,11 +9,13 @@
 from functools import lru_cache
 from secrets import SystemRandom
 
-from config import WEIGHT_QUOTIENT
+from common.config import WEIGHT_QUOTIENT
+from common.event import EventType, subscribe
 from entities.bet import Bet, Decision
 from entities.cards import Card, Deck, VALUES
 from entities.combinations import best_hand, Combination, COMBINATIONS
 from entities.players import Player
+from entities.round import Round
 from errors.errors import UnavailableDecision, TooSmallBetError
 
 random = SystemRandom()
@@ -300,6 +302,16 @@ class AI(Player):
                 raise UnavailableDecision
             self.decide(Decision(action, decider.how_much_to_bet(current_max_bet)))
 
+    def make_a_move_by_round(self, game_round: Round):
+        if self.is_ai:
+            self.make_a_move(
+                game_round.board,
+                self.requested_bet,
+                game_round.stage_index,
+                game_round.blind_size,
+                len(game_round.active_players)
+            )
+
 
 def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset[Card]]:
     """all possible pocket cards can be found at a competitor's"""
@@ -313,3 +325,6 @@ def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset
             if card is not second_card:
                 result.add(frozenset([card, second_card]))
     return result
+
+
+subscribe(EventType.PLAYER_MAKE_MOVE, AI.make_a_move_by_round)
