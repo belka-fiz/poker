@@ -40,7 +40,16 @@ class Round:
 
         if not self.debug:
             self.deal_players_cards()
+            self.play_round()
+
+    def play_round(self):
+        """Cycle through stages till the end"""
+        for stage_index in range(1, 5):
+            self.stage_index = stage_index
             self.new_stage()
+            if self._number_of_players_left == 1:
+                break
+        self._end()
 
     @property
     def board(self):
@@ -54,7 +63,6 @@ class Round:
 
     def new_stage(self):
         """New cards are dealt, players make their bets"""
-        self.stage_index += 1
         self._deal_board(self.NUMBER_OF_CARDS[self.stage_index])
 
         post_event(EventType.NEW_STAGE, self.board, self.pot)
@@ -70,12 +78,9 @@ class Round:
         elif not self.debug:
             self._bets_round()
 
-        if not self.debug:
-            # find winners if necessary or proceed to the next stage
-            if self._number_of_players_left == 1 or self.stage_index == 4:
-                self._end()
-            else:
-                self.new_stage()
+    @property
+    def stage_name(self) -> str:
+        return self.STAGES[self.stage_index]
 
     @property
     def active_players(self) -> list[Player]:
@@ -94,13 +99,14 @@ class Round:
 
     def _update_queue(self, last_raiser: Player) -> list[Player]:
         """make a queue of players to move after the last raiser"""
+        active_players = self.active_players
         try:
-            index = self.active_players.index(last_raiser)
+            index = active_players.index(last_raiser) + 1
         except ValueError:
-            index = -1
-        return self.active_players[index + 1:] + self.active_players[:index + 1]
+            index = 0
+        return active_players[index:] + active_players[:index]
 
-    def _turns_queue(self, last_raiser: Player) -> Iterable[Union[Player]]:
+    def _next_player_generator(self, last_raiser: Player) -> Iterable[Union[Player]]:
         """get the next player to move"""
         while not_decided := [player for player in self._update_queue(last_raiser) if not player.made_decision]:
             if len([player for player in self.active_players if not player.is_all_in]) == 1 and not self.max_bet:
@@ -115,7 +121,7 @@ class Round:
                 player.reset_decision()
 
         # cycle through players and ask for a decision
-        for player in self._turns_queue(last_raiser):
+        for player in self._next_player_generator(last_raiser):
             current_max_bet = self.max_bet
             post_event(EventType.PLAYER_PREPARE_MOVE, player, current_max_bet)
             post_event(EventType.PLAYER_MAKE_MOVE, player, self)
@@ -177,7 +183,7 @@ class Round:
     def end_stats(self):
         """Game stage closing stats: the stage, the board and the players' end stack"""
         return {
-            'stage': self.STAGES[self.stage_index],
+            'stage': self.stage_name,
             'board': self.board,
             'players': [{player.name: player.stack} for player in self.players]
         }
@@ -185,7 +191,7 @@ class Round:
     def get_status(self):
         """return current game stage, players statuses, the bank and the board"""
         return {
-            'stage': self.STAGES[self.stage_index],
+            'stage': self.stage_name,
             'board': self.board,
             'pot': self.pot.pot_size,
             'players': [player.get_status() for player in self.players]
