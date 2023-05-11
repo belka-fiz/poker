@@ -37,10 +37,6 @@ class Pot:
         self._contributions[player] += amount
         self.pot_size += amount
 
-    def get_active_players(self):
-        """list the players in the pot"""
-        return self.players
-
     def unite_pots(self):
         """unite side pots with the same number of players"""
         # remove folded players from pots
@@ -86,7 +82,8 @@ class Pot:
 
     def distribute(self, rating: list[tuple[tuple, list[Player]]]):
         """
-        pay prize money to the winners of each pot
+        define the winners of each pot
+        decide how much money to pay the winners of each pot
         there may be multiple winners in multiple pots
         """
         for side_pot in self.pots:
@@ -97,13 +94,12 @@ class Pot:
 
             # case multiple players in the pot
             side_pot_winners: list[Player] = []
-            for _, players in rating:
-                for player in players:
-                    if player in side_pot.players:
-                        side_pot_winners.append(player)
+            for _, winners in rating:
+                for winner in winners:
+                    if winner in side_pot.players:
+                        side_pot_winners.append(winner)
                 if side_pot_winners:
                     break
 
             prize = side_pot.size / len(side_pot_winners)
-            for _winner in side_pot_winners:
-                self.winners[side_pot] = {_winner: prize}
+            self.winners[side_pot] = {_winner: prize for _winner in side_pot_winners}

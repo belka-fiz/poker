@@ -1,3 +1,4 @@
+from collections import defaultdict
 import pytest
 
 from entities.players import Player
@@ -48,12 +49,11 @@ def test_remove_player(players):
     p3.ask_for_a_decision(100)
     p3.decide(Decision(Bet.FOLD))
     assert p3 not in test_pot.players
-    assert p3 not in test_pot.get_active_players()
     assert p3 in test_pot._contributions.keys()
 
 
 def test_get_active_players(players, pot):
-    active_players = pot.get_active_players()
+    active_players = pot.players
     assert len(active_players) == 3
     for player in players:
         assert player in active_players
@@ -87,12 +87,44 @@ def test_recalculate_pots_same_size(players, pot):
     assert pot.pots[0].size == len(players) * 50
 
 
-def test_distribute_pot():
+Wince_100 = Player(100, name="Wince")
+Wince_200 = Player(200, name="Wince")
+Midce_150 = Player(150, name="Midce")
+Looce_100 = Player(100, name="Looce")
+Looce_200 = Player(200, name="Looce")
+
+distr_parametrization = [
+    (Pot([Wince_100, Looce_100]), [(None, [Wince_100])], {Wince_100: 200}),
+    (Pot([Wince_200, Looce_100]), [(None, [Wince_200])], {Wince_200: 300}),
+    (Pot([Wince_100]), [(None, [Wince_100])], {Wince_100: 100}),
+    (Pot([Wince_100, Midce_150, Looce_200]), [(None, [Wince_100]),
+                                              (None, [Midce_150]),
+                                              (None, [Looce_200])], {Wince_100: 300,
+                                                                     Midce_150: 100,
+                                                                     Looce_200: 50}),
+    (Pot([Wince_100, Looce_100]), [(None, [Wince_100, Looce_100])], {Wince_100: 100,
+                                                                     Looce_100: 100})
+]
+
+
+@pytest.mark.parametrize('parametrized_pot, rating, expected_wins', distr_parametrization)
+def test_distribute_pot(parametrized_pot: Pot, rating: list[tuple[tuple, list]], expected_wins: dict[Player: int]):
     """
     test pot distribution:
-    one size - one winner
-    several sizes - one winner from the biggest pot
-    one player left - the winner
-    three sizes, each time a different winner
+    + one size - one winner
+    + several sizes - one winner from the biggest pot
+    + one player left - the winner
+    + three sizes, each time a different winner
+    + two winners in one pot
     """
-    pass
+    for player in parametrized_pot.players:
+        parametrized_pot.add_chips(player, player.stack)
+    parametrized_pot.recalculate_pots()
+    parametrized_pot.distribute(rating)
+    print(parametrized_pot.winners)
+    total_prizes = defaultdict(int)
+    for win_values in parametrized_pot.winners.values():
+        for k, v in win_values.items():
+            total_prizes[k] += v
+    for expected_win in expected_wins.items():
+        assert expected_win in total_prizes.items()
