@@ -1,7 +1,7 @@
 from secrets import SystemRandom
 from typing import Union
 
-from ai.ai import AI
+from ai.ai import AIBetProcessor
 from common.config import DEFAULT_PLAYERS_NUM, DEFAULT_BUY_IN, DEFAULT_BLIND
 from controller.cli import ask_for_int_input, ask_for_str_input, ask_for_bool_input
 from data.constants import NAMES
@@ -24,8 +24,10 @@ def start_a_game(number_of_players: int, init_chips: float, blind: float, player
     """
     # create AI players and assign uniq names to them
     names = NAMES.copy()
-    players: list[Union[Player, AI]]
-    players = [AI(init_chips, name=names.pop(random.randint(0, len(names)))) for _ in range(number_of_players - 1)]
+    players: list[Union[Player]]
+    players = [Player(init_chips,
+                      is_ai=True,
+                      name=names.pop(random.randint(0, len(names)))) for _ in range(number_of_players - 1)]
     # add one human player
     players.append(Player(init_chips, is_ai=False, name=player_name))
     # create the game and add the players
@@ -40,7 +42,7 @@ def start_a_game(number_of_players: int, init_chips: float, blind: float, player
             break
     # list the players and their stacks at the end of the game
     for player in players:
-        print(f"{player.name}'s stack is {player.stack}")
+        print(f"{player.NAME}'s stack is {player.stack}")
 
 
 def main():

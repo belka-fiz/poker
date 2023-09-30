@@ -27,7 +27,7 @@ from entities.combinations import best_hand, duplicates, cards_by_suit, cards_in
 
 class ProbabilityCounter:
     """
-    Class aimed to find win chances using combinatorincs and not just simply guessing all possible cards
+    Class aimed to find win chances using combinatorics and not just simply guessing all possible cards
     Calculate chances of duplicates, suit matches, cards amount in different ranges, etc
     """
 
@@ -36,7 +36,7 @@ class ProbabilityCounter:
         self.board = tuple(community_cards or [])
         self.known_cards = self.hand + self.board
         self.cards_left = 52 - len(self.known_cards)
-        self.my_combination = best_hand(self.known_cards)
+        self.my_current_combination = best_hand(self.known_cards)
 
     @cached_property
     def duplicates_in_known(self) -> dict:
@@ -69,23 +69,23 @@ class ProbabilityCounter:
         return cards_in_ranges(self.known_cards)
 
     @cached_property
-    def pocket_one_card_probability(self) -> dict:
+    def pocket_one_card_probabilities(self) -> dict:
         """Shows the probability of getting a card of each value from deck"""
         return {value: (4 - self.duplicates_in_known[value])/self.cards_left for value in VALUES}
 
     @cached_property
-    def pocket_at_least_one_card_probability(self) -> dict:
+    def pocket_at_least_one_card_probabilities(self) -> dict:
         """find the probability that an opponent have a card of the exact value"""
-        card_probability = {}
+        card_probabilities = {}
         for value in VALUES:
             single_probability = (4 - self.duplicates_in_known[value]) / self.cards_left
             second_card_probability = (4 - self.duplicates_in_known[value]) / (self.cards_left - 1)
-            card_probability[value] = single_probability + (1 - single_probability) * second_card_probability
-        # card_probability = {value: (4 - self.duplicates_in_known[value])/self.cards_left for value in VALUES}
-        return card_probability
+            card_probabilities[value] = single_probability + (1 - single_probability) * second_card_probability
+        # card_probabilities = {value: (4 - self.duplicates_in_known[value])/self.cards_left for value in VALUES}
+        return card_probabilities
 
     @cached_property
-    def pocket_pair_probability(self) -> dict:
+    def pocket_pair_probabilities(self) -> dict:
         """Shows the probability of getting a pair of each value"""
         pair_probability = {}
         for value in VALUES:
@@ -97,7 +97,7 @@ class ProbabilityCounter:
         return pair_probability
 
     @cached_property
-    def pocket_suit_probability(self) -> dict:
+    def pocket_suit_probabilities(self) -> dict:
         """Probabilities that an opponent gets at least one card for each suit"""
         return {suit: (13 - self.suited_count_in_known[suit]) / self.cards_left for suit in SUITS}
 
@@ -125,7 +125,7 @@ class ProbabilityCounter:
             _suit_cards_used += 1
         return probability
 
-    def pocket_suited_cards_probability(self) -> dict:
+    def pocket_suited_cards_probabilities(self) -> dict:
         """Probability that an opponent has suited cards"""
         suit_probability = {}
         for suit in SUITS:
@@ -133,7 +133,7 @@ class ProbabilityCounter:
             suit_probability[suit] = (13 - suit_count) / self.cards_left * (12 - suit_count) / (self.cards_left - 1)
         return suit_probability
 
-    def straight_possibilities(self) -> dict:
+    def competitor_straight_possibilities(self) -> dict:
         """probabilities of getting the straight for each range"""
         _straight_possibilities = {}
         for _range in CARD_RANGES:
@@ -144,7 +144,7 @@ class ProbabilityCounter:
                 _straight_possibilities[_range] = 0
         return _straight_possibilities
 
-    def flush_possibilities(self) -> dict:
+    def competitor_flush_possibilities(self) -> dict:
         """Probabilities to get flush for each suit"""
         _flush_possibilities = {}
         for suit in SUITS:
@@ -163,12 +163,18 @@ if __name__ == '__main__':
     board = tuple(deck.draw_one() for _ in range(3))
     print(f"The board is {board}")
     board_counter = ProbabilityCounter(hand, board)
-    print(board_counter.pocket_at_least_one_card_probability)
-    print(board_counter.pocket_pair_probability)
-    print(board_counter.pocket_suit_probability)
-    print(board_counter.pocket_suited_cards_probability())
-    print(board_counter.straight_possibilities())
-    print(sum(board_counter.straight_possibilities().values()))
-    print(board_counter.flush_possibilities())
-    print(sum(board_counter.flush_possibilities().values()))
+    print("\nProbability that one competitor has at least one card of a value")
+    print(board_counter.pocket_at_least_one_card_probabilities)
+    print("\nProbability that one competitor has a pocket pair of a value")
+    print(board_counter.pocket_pair_probabilities)
+    print("\nProbability that one competitor has at least one card of a suit")
+    print(board_counter.pocket_suit_probabilities)
+    print("\nProbability that one competitor has suited cards")
+    print(board_counter.pocket_suited_cards_probabilities())
+    print("\nProbability that competitor has a straight by value")
+    print(board_counter.competitor_straight_possibilities())
+    print(sum(board_counter.competitor_straight_possibilities().values()))
+    print("\nProbability that competitor has a flush by suit")
+    print(board_counter.competitor_flush_possibilities())
+    print(sum(board_counter.competitor_flush_possibilities().values()))
     print(best_hand(hand + board))

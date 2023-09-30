@@ -118,7 +118,7 @@ def test_distribute_pot(parametrized_pot: Pot, rating: list[tuple[tuple, list]],
     + two winners in one pot
     """
     for player in parametrized_pot.players:
-        parametrized_pot.add_chips(player, player.stack)
+        parametrized_pot.add_chips(player, player.__stack)
     parametrized_pot.recalculate_pots()
     parametrized_pot.distribute(rating)
     print(parametrized_pot.winners)

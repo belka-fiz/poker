@@ -12,6 +12,7 @@ from secrets import SystemRandom
 from common.config import WEIGHT_QUOTIENT
 from common.event import EventType, subscribe
 from entities.bet import Bet, Decision
+from entities.bet_processor import BetProcessor
 from entities.cards import Card, Deck, VALUES
 from entities.combinations import best_hand, Combination, COMBINATIONS
 from entities.players import Player
@@ -195,7 +196,7 @@ class StageBetAI:
     def how_much_to_bet(self, max_bet) -> float:
         """Deciding about the size of the raise using random"""
         bet = self.comfort_bet() * random.randint(0, 3)
-        return min(max(bet, max_bet), self.player.stack)
+        return min(max(bet, max_bet), self.player.status.stack)
 
 
 class PreFlopDecider:
@@ -226,7 +227,7 @@ class PreFlopDecider:
 
     def highness(self) -> float:
         """quotient for the highness of the pocket cards"""
-        return max(self.__hand).value.order / max(VALUES).order
+        return max(self.__hand).value.order / max(VALUES).order  # noqa
 
     def weight(self) -> float:
         """The overall weight of the pocket cards according to the quotients above"""
@@ -253,27 +254,18 @@ class PreFlopDecider:
             bet = 2 * blind
         else:
             bet = blind
-        return min([max([bet, current_bet]), self.player.decision.size + self.player.stack])
+        return min([max([bet, current_bet]), self.player.status.last_move.size + self.player.status.stack])
 
 
-class AI(Player):
+class AIBetProcessor(BetProcessor):
     """
     AI extention for Player's class
     Contains logic for calling bet decisions classes according to the stage of the game
     """
-
-    def __init__(self,
-                 start_stack: float,
-                 name: str = '',
-                 # pre_flop_agression: float = 0,
-                 # stage_agression: float = 0
-                 ):
-        super().__init__(start_stack, is_ai=True, name=name)
-
     def make_a_move(self, board, current_max_bet, stage_index, blind_size, number_of_players_left):
         """Calling the logic for bet decisions"""
         if stage_index == 1:
-            decider = PreFlopDecider(self)
+            decider = PreFlopDecider(self.player)
             ai_decisions = decider.decision()
             try:
                 action = [d for d in ai_decisions if d in self.available_actions][0]
@@ -286,12 +278,12 @@ class AI(Player):
             try:
                 self.decide(Decision(action, amount))
             except TooSmallBetError as e:
-                print(f"{current_max_bet=}, {self.stack=}, "
+                print(f"{current_max_bet=}, {self.p_stats.stack=}, "
                       f"{self.requested_bet=}, {self.available_actions=}, "
-                      f"{self.decision.size=}, {action=}, {amount=}")
+                      f"{self.p_stats.last_move.size=}, {action=}, {amount=}")
                 raise e
         else:
-            decider = StageBetAI(board, self, blind_size, number_of_players_left)
+            decider = StageBetAI(board, self.player, blind_size, number_of_players_left)
             ai_decisions = decider.should_i_bet(current_max_bet)
             try:
                 action = [d for d in ai_decisions if d in self.available_actions][0]
@@ -304,14 +296,19 @@ class AI(Player):
 
     def make_a_move_by_round(self, game_round: Round):
         """adapter method for calling make a move providing round as a parameter"""
-        if self.is_ai:
-            self.make_a_move(
-                game_round.board,
-                self.requested_bet,
-                game_round.stage_index,
-                game_round.blind_size,
-                len(game_round.active_players)
-            )
+        try:
+            if self.player.is_ai:
+                self.make_a_move(
+                    game_round.board,
+                    self.requested_bet,
+                    game_round.stage_index,
+                    game_round.blind_size,
+                    len(game_round.active_players)
+                )
+        except AttributeError as e:
+            print(self.p_stats.get())
+            print(type(self))
+            raise e
 
 
 def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset[Card]]:
@@ -328,4 +325,4 @@ def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset
     return result
 
 
-subscribe(EventType.PLAYER_MAKE_MOVE, AI.make_a_move_by_round)
+subscribe(EventType.PLAYER_MAKE_MOVE, AIBetProcessor.make_a_move_by_round)

@@ -46,11 +46,11 @@ class Game:
         """
         # kick bankrupt players or add money for AI
         for player in self.players:
-            if player.stack <= 0:
+            if player.status.stack <= 0:
                 if not self.continuous or not player.is_ai:
                     self.remove_player(player)
                 elif player.is_ai:
-                    player.add_money(self.buy_in)
+                    player.status.add_chips(self.buy_in)
 
         # raise an exception if no players left
         if len(self.players) < 2:

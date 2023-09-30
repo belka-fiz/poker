@@ -1,6 +1,7 @@
-from typing import Iterable, Union
+from typing import Union
 
 from common.event import post_event, EventType
+from entities.bet_processor import BetProcessor
 from entities.cards import Card, Deck
 from entities.combinations import Combination, best_hand
 from entities.players import Player
@@ -63,7 +64,7 @@ class Round:
         if self.stage_index == 1:
             for i, player in enumerate(self.active_players[:2]):
                 amount = self.blind_size / 2 * (1 + i)
-                player.post_blind(amount)
+                player.status.post_blind(amount)
                 post_event(EventType.PLAYER_MOVED, player)
             if not self.debug:
                 self._bets_round(self.players[1])
@@ -80,7 +81,11 @@ class Round:
     @property
     def active_players(self) -> list[Player]:
         """Provides the list of players who haven't folded"""
-        return [player for player in self.players if player.is_active]
+        return [player for player in self.players if player.status.is_active]
+
+    def players_to_move(self) -> list[Player]:
+        """List of players yet to move"""
+        return [player for player in self.players if player.status.yet_to_move(self.max_bet)]
 
     @property
     def _number_of_players_left(self):
@@ -90,38 +95,35 @@ class Round:
     @property
     def max_bet(self):
         """The size of the biggest bet in the current game stage"""
-        return max(player.decision.size for player in self.players)
+        return max(player.status.last_move.size for player in self.players)
 
-    def _update_queue(self, last_raiser: Player) -> list[Player]:
+    def players_to_move_since_last_raiser(self, last_raiser: Player) -> list[Player]:
         """make a queue of players to move after the last raiser"""
         try:
-            index = self.active_players.index(last_raiser)
+            index = self.players_to_move().index(last_raiser)
         except ValueError:
             index = -1
-        return self.active_players[index + 1:] + self.active_players[:index + 1]
-
-    def _turns_queue(self, last_raiser: Player) -> Iterable[Union[Player]]:
-        """get the next player to move"""
-        while not_decided := [player for player in self._update_queue(last_raiser) if not player.made_decision]:
-            if len([player for player in self.active_players if not player.is_all_in]) == 1 and not self.max_bet:
-                break
-            yield not_decided[0]
+        return self.players_to_move()[index + 1:] + self.players_to_move()[:index + 1]
 
     def _bets_round(self, last_raiser: [Player] = None):
         """cycle through active players and get players' moves"""
         # reset each player's decision except the last raiser and the ones who are all-in
         for player in self.active_players:
-            if player is not last_raiser and not player.is_all_in:
-                player.reset_decision()
+            if player is not last_raiser:
+                player.status.reset_soft()
 
         # cycle through players and ask for a decision
-        for player in self._turns_queue(last_raiser):
+        for player in self.players_to_move_since_last_raiser(last_raiser):
             current_max_bet = self.max_bet
-            post_event(EventType.PLAYER_PREPARE_MOVE, player, current_max_bet)
-            post_event(EventType.PLAYER_MAKE_MOVE, player, self)
+            if player.is_ai:
+                with AIBetProcessor(player, current_max_bet) as bet_processor:
+                    post_event(EventType.PLAYER_MAKE_MOVE, bet_processor, self)
+            else:
+                with BetProcessor(player, current_max_bet) as bet_processor:
+                    post_event(EventType.PLAYER_MAKE_MOVE, bet_processor, self)
             post_event(EventType.PLAYER_MOVED, player)
 
-            if player.decision.size > current_max_bet:
+            if player.status.last_move.size > current_max_bet:
                 last_raiser = player
                 self._bets_round(last_raiser)
                 return
@@ -130,7 +132,7 @@ class Round:
     def deal_players_cards(self):
         """just deal cards starting from the next after dealer"""
         for player in self.players:
-            player.new_game_round()
+            player.reset()
         for _ in range(2):
             for player in self.active_players:
                 player.add_card(self.deck.draw_one())
@@ -138,8 +140,8 @@ class Round:
     def _update_bank(self):
         """collect all bets after each stage"""
         for player in self.players:
-            self.pot.add_chips(player, player.decision.size)
-            player.new_stage()
+            self.pot.add_chips(player, player.status.last_move.size)
+            player.status.reset_soft()
 
     def _find_winners(self):
         """Determine the rating of players' combinations and the list of players having each of them"""
@@ -172,14 +174,14 @@ class Round:
         post_event(EventType.ROUND_END, self)
 
         for player in self.players:
-            player.new_game_round()
+            player.reset()
 
     def end_stats(self):
         """Game stage closing stats: the stage, the board and the players' end stack"""
         return {
             'stage': self.STAGES[self.stage_index],
             'board': self.board,
-            'players': [{player.name: player.stack} for player in self.players]
+            'players': [{player.NAME: player.status.stack} for player in self.players]
         }
 
     def get_status(self):
@@ -188,5 +190,5 @@ class Round:
             'stage': self.STAGES[self.stage_index],
             'board': self.board,
             'pot': self.pot.pot_size,
-            'players': [player.get_status() for player in self.players]
+            'players': [player.status.get() for player in self.players]
         }

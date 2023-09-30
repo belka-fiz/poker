@@ -28,7 +28,7 @@ class Decision:
         self.size = size
 
     def __eq__(self, other):
-        return self.action == other.action and self.size == other.size
+        return self.action == other.last_move and self.size == other.size
 
     def __hash__(self):
         return self.size + hash(self.action)

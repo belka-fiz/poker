@@ -1,9 +1,96 @@
-from typing import Any, Callable, Optional
+from typing import Any  # , Callable, Optional
 
 from common.event import EventType, subscribe
 from entities.bet import Bet, Decision
 from entities.cards import Card
 from errors import errors
+
+
+class PlayerStatus:
+    """Represents the player's status in the round"""
+    def __init__(self, stack):
+        self.__stack = stack
+        self.last_move: Decision = Decision(Bet.NOT_DECIDED)
+
+    def reset(self):
+        """reset the last action. Should be called at the start of a round"""
+        self.last_move = Decision(Bet.NOT_DECIDED)
+
+    def reset_soft(self):
+        """soft reset of the action. Should be used on the next stage"""
+        if self.last_move.action not in (Bet.ALL_IN, Bet.FOLD):
+            self.reset()
+        else:
+            self.last_move.size = 0
+
+    def add_chips(self, amount):
+        """add the chips to the stack"""
+        self.__stack += amount
+
+    def subtract_chips(self, amount):
+        """take chips from the stack"""
+        self.__stack -= amount
+
+    @property
+    def stack(self) -> float:
+        """return the player's stack"""
+        return self.__stack
+
+    @property
+    def is_active(self) -> bool:
+        """Shows if the player is still in the game and participates in the prize distribution"""
+        return (self.stack > 0 or self.last_move.action == Bet.ALL_IN) and not self.last_move.action == Bet.FOLD
+
+    @property
+    def is_all_in(self) -> bool:
+        """Shows whether the player is all-in"""
+        return self.last_move.action == Bet.ALL_IN
+
+    def yet_to_move(self, bet_size) -> bool:
+        """Shows whether player is yet to move"""
+        return (self.last_move.size < bet_size or self.last_move.action == Bet.BLIND) \
+            and not self.last_move.action == Bet.ALL_IN
+
+    def get(self) -> dict:
+        """dict representation"""
+        return {
+            "stack": self.stack,
+            "last_move": self.last_move,
+        }
+
+    def bet(self, amount):
+        """Place a bet"""
+        if amount:
+            diff = amount - self.last_move.size
+            if diff >= self.stack:
+                amount = self.stack + self.last_move.size
+                self.last_move = Decision(Bet.ALL_IN, amount)
+            self.subtract_chips(diff)
+            if self.stack <= 0:
+                self.__stack = 0
+
+    def post_blind(self, amount):
+        """Place a blind without marking player as having decided"""
+        self.bet(amount)
+        if not self.is_all_in:
+            self.last_move = Decision(Bet.BLIND, amount)
+
+
+class Hand:
+    def __init__(self):
+        self.__cards: list[Card] = []
+
+    def add_card(self, card):
+        """Add a pocket card. Must be used by the game only"""
+        if len(self.__cards) == 2:
+            raise errors.TooManyCards('The hand is full')
+        self.__cards.append(card)
+
+    def reset(self):
+        self.__cards = []
+
+    def get(self) -> tuple[Card]:
+        return tuple(self.__cards)
 
 
 class Player:
@@ -13,202 +100,34 @@ class Player:
     """
 
     def __init__(self, start_stack: float, is_ai: bool = True, name: str = ''):
-        self.__stack = start_stack
-        self.__hand: list[Card] = []
-        self.__all_in: bool = False
-        self._in_the_game: bool = True
-        self._made_decision: bool = False
-        self.available_actions: list[Bet] = []
-        self.requested_bet: float = 0
-        self.__is_ai: bool = is_ai
-        self.name: str = name
-        self.decision: Decision = Decision(Bet.NOT_DECIDED)
+        self.__hand = Hand()
+        self.__IS_AI: bool = is_ai
+        self.NAME: str = name
+        self.status = PlayerStatus(start_stack)
 
     def __repr__(self):
-        return f"{self.name}({'AI' if self.is_ai else 'human'})"
+        return f"{self.NAME}({'AI' if self.is_ai else 'human'})"
 
-    # resets
-    def _reset_status(self):
-        """reset bet status except all_in"""
-        if self.__all_in:
-            self.decision.size = 0  # walkaround for current_bet resets
-        else:
-            self._made_decision = False
-            self.decision = Decision(Bet.NOT_DECIDED)
-        self.available_actions = []
-        self.requested_bet = 0
-
-    def new_stage(self):
-        """reset just necessary things for a new game stage"""
-        self._reset_status()
-
-    def new_game_round(self):
-        """reset everything"""
-        self._reset_status()
-        self.__hand: list[Card] = []
-        self.__all_in = False
-        if self.__stack > 0:
-            self._in_the_game = True
-
-    # bets
-    def _bet(self, amount):
-        """Place a bet"""
-        if amount:
-            diff = amount - self.decision.size
-            if diff >= self.__stack:
-                self.__all_in = True
-                amount = self.__stack + self.decision.size
-                self.decision = Decision(Bet.ALL_IN, amount)
-            self.__stack -= diff
-            if self.__stack <= 0:
-                self.__stack = 0
-
-    def post_blind(self, amount):
-        """Place a blind without marking player as having decided"""
-        self._bet(amount)
-        if self.__all_in:
-            self._made_decision = True
-        else:
-            self.decision = Decision(Bet.BLIND, amount)
+    def reset(self):
+        self.__hand.reset()
+        self.status.reset()
 
     @property
-    def is_all_in(self):
-        """Shows if the player went all-in in the current round"""
-        return self.__all_in
-
-    # cards
-    def add_card(self, card):
-        """Add a pocket card. Must be used by the game only"""
-        if len(self.__hand) == 2:
-            raise errors.TooManyCards('The hand is full')
-
-        self.__hand.append(card)
-
-    @property
-    def hand(self):
+    def hand(self) -> tuple[Card]:
         """Player's pocket cards"""
-        return tuple(self.__hand)
+        return self.__hand.get() if self.status.is_active else ()
 
-    def get_status(self):
-        """Shows general player's stats"""
-        data = {
-            'name': self.name,
-            'in_game': self._in_the_game,
-            'last_decision': self.decision.action.name.capitalize(),
-            'current_bet': self.decision.size,
-            'all_in': self.__all_in,
-            'money': self.__stack,
-            'made_decision': self._made_decision
-        }
-        return data
+    def add_card(self, card: Card):
+        self.__hand.add_card(card)
 
     def get_reduced_status(self) -> dict:
         """Shows less data in more readable way"""
-        return {
-            "name": self.name,
-            "last_action": self.decision,
-            "money": self.stack
-        }
-
-    @property
-    def is_active(self):
-        """Shows whether player has not folded yet"""
-        return self._in_the_game
-
-    # decisions
-    @property
-    def made_decision(self):
-        """Shows whether player has already made a requested decision"""
-        return self._made_decision
-
-    def reset_decision(self):
-        """Mark player as not having decided"""
-        self._made_decision = False
-
-    def ask_for_a_decision(self, requested_bet=0.0):
-        """Update available actions for player to make"""
-        if not requested_bet or requested_bet == self.decision.size:
-            self.available_actions = [Bet.CHECK, Bet.FOLD, Bet.RAISE, Bet.ALL_IN]
-        elif requested_bet < self.__stack + self.decision.size:
-            self.available_actions = [Bet.FOLD, Bet.CALL, Bet.RAISE, Bet.ALL_IN]
-        elif requested_bet == self.__stack + self.decision.size:
-            self.available_actions = [Bet.FOLD, Bet.CALL, Bet.ALL_IN]
-        else:
-            self.available_actions = [Bet.FOLD, Bet.ALL_IN]
-        self.requested_bet = requested_bet
-        return self.available_actions
-
-    def process_check(self):
-        self.decision.action = Bet.CHECK
-
-    def process_fold(self):
-        self.decision.action = Bet.FOLD
-        self.__hand = []
-        self._in_the_game = False
-
-    def process_call(self):
-        self._bet(self.requested_bet)
-        self.decision = Decision(Bet.CALL, self.requested_bet)
-
-    def process_raise(self, amount: float):
-        if amount < self.requested_bet:
-            raise errors.TooSmallBetError
-
-        self._bet(amount)
-        if not self.__all_in:
-            if amount == self.requested_bet:
-                if self.requested_bet == 0:
-                    self.decision = Decision(Bet.CHECK)
-                else:
-                    self.decision = Decision(Bet.CALL, amount)
-            else:
-                self.decision = Decision(Bet.RAISE, amount)
-
-    def process_all_in(self):
-        self._bet(self.__stack + self.decision.size)
-
-    def process_bet(self, action: Bet, *args: float) -> None:
-        functions: dict[Bet: Callable[[Bet, Optional[float]], None]] = {
-            Bet.CHECK: self.process_check,
-            Bet.FOLD: self.process_fold,
-            Bet.CALL: self.process_call,
-            Bet.RAISE: self.process_raise,
-            Bet.ALL_IN: self.process_all_in
-        }
-        functions[action](*args)  # noqa
-
-    def decide(self, decision: Decision):
-        """An interface for bet processing"""
-        action = decision.action
-        if action not in self.available_actions:
-            error_msg = f'Decision {decision} is not available. Must choose from: {self.available_actions}'
-            raise errors.UnavailableDecision(error_msg)
-
-        if decision.size < 0:
-            raise errors.NegativeBetError
-
-        if action == Bet.RAISE:
-            args = [decision.size]
-        else:
-            args = []
-        self.process_bet(action, *args)
-
-        self._made_decision = True
-
-    # money
-    def add_money(self, amount):
-        """When player buys credit or wins"""
-        self.__stack += amount
-
-    @property
-    def stack(self):
-        """Show player's stack"""
-        return self.__stack
+        return {"name": self.NAME} | self.status.get()
 
     @property
     def is_ai(self) -> bool:
         """Shows whether player is AI"""
-        return self.__is_ai
+        return self.__IS_AI
 
 
 class Account:
@@ -242,9 +161,8 @@ class Account:
             raise errors.GameNotFoundError
 
         player: Player = self.games[game]
-        self._chips_amount += player.stack
+        self._chips_amount += player.status.stack
         self.games.pop(game)
 
 
-subscribe(EventType.PLAYER_PREPARE_MOVE, Player.ask_for_a_decision)
 subscribe(EventType.PLAYER_MOVED, Player.get_reduced_status)

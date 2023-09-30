@@ -1,7 +1,7 @@
 from common.event import EventType, subscribe
 from entities.bet import Bet, Decision
+from entities.bet_processor import BetProcessor
 from entities.cards import Card
-from entities.players import Player
 from entities.round import Round
 from errors.errors import UnavailableDecision, NegativeBetError, TooSmallBetError
 
@@ -26,11 +26,11 @@ def text_to_bet(input_str: str) -> tuple[[Decision, None], str]:
         return None, "Invalid bet amount. It must be a floating point number"
 
 
-def make_players_decision(player: Player, decision: Decision) -> str:
+def make_players_decision(bet_processor: BetProcessor, decision: Decision) -> str:
     """Acts the player's Decision and handling errors"""
     error_msg = ''
     try:
-        player.decide(decision)
+        bet_processor.decide(decision)
     except UnavailableDecision:
         error_msg = "You can't choose this decision"
     except NegativeBetError:
@@ -40,25 +40,25 @@ def make_players_decision(player: Player, decision: Decision) -> str:
     return error_msg
 
 
-def game_cli_action(player: Player, board: [tuple[Card], list[Card]], bet_size):
+def game_cli_action(bet_processor: BetProcessor, board: [tuple[Card], list[Card]], bet_size):
     """Player interaction during the game"""
-    prompt = f"Choose your bet. Your cards: {player.hand}, the board: {board}\n" \
-             f"Your stack is {player.stack}. Your current bet is {player.decision.size}\n" \
-             f"Your variants: {player.available_actions}. The bet is {bet_size}"
+    prompt = f"Choose your bet. Your cards: {bet_processor.player.hand}, the board: {board}\n" \
+             f"Your stack is {bet_processor.p_stats.stack}. Your current bet is {bet_processor.p_stats.last_move.size}\n" \
+             f"Your variants: {bet_processor.available_actions}. The bet is {bet_size}"
     while True:
         input_str = input(prompt + '\n')
         decision, prompt = text_to_bet(input_str)
         if prompt:
             continue
-        prompt = make_players_decision(player, decision)
+        prompt = make_players_decision(bet_processor, decision)
         if not prompt:
             break
 
 
-def game_cli_action_by_round(player: Player, game_round: Round):
+def game_cli_action_by_round(bet_processor: BetProcessor, game_round: Round):
     """Temp adapter for calling game_cli_action from events"""
-    if not player.is_ai:
-        game_cli_action(player, game_round.board, player.requested_bet)
+    if not bet_processor.player.is_ai:
+        game_cli_action(bet_processor, game_round.board, bet_processor.requested_bet)
 
 
 def ask_for_int_input(parameter: str, domain: tuple[int, int], suggested_range: tuple[int, int]) -> int:
