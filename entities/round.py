@@ -1,3 +1,4 @@
+from operator import itemgetter
 from typing import Iterable, Union
 
 from common.event import post_event, EventType
@@ -159,7 +160,7 @@ class Round:
             for player, comb in players_combinations.items():
                 players_grouped_by_combinations[comb].append(player)
             # sort players groups by their combinations and store it
-            self.rating = sorted(players_grouped_by_combinations.items(), reverse=True)
+            self.rating = sorted(players_grouped_by_combinations.items(), key=itemgetter(0), reverse=True)
 
     def _end(self):
         """Find winners and give them money"""
