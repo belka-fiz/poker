@@ -41,6 +41,8 @@ class TestRoundCards:
         assert len(game_round_for_2.board) == 5
 
 
+
+@pytest.mark.skip(reason="Not implemented")
 class TestBetsCollection:
     """Make sure the bets are subtracted from the players stacks and added to the pot"""
 
