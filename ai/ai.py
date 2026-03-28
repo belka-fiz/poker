@@ -7,6 +7,7 @@
 3) Try to guess opponents' hands by their bets
 """
 from functools import lru_cache
+from itertools import combinations
 from secrets import SystemRandom
 
 from common.config import WEIGHT_QUOTIENT
@@ -19,6 +20,7 @@ from entities.round import Round
 from errors.errors import UnavailableDecision, TooSmallBetError
 
 random = SystemRandom()
+FULL_DECK = frozenset(Deck.all_cards())
 
 
 @lru_cache(128)
@@ -27,49 +29,29 @@ def all_possible_sets_to_open(
         for_competitor=False
 ) -> set[frozenset[Card]]:
     """find all cards that can be possibly opened later or found in competitor's hand"""
-    result: set[frozenset[Card]] = set()
-    deck_rest = Deck.all_cards() - set(known_cards)
     number_of_cards_to_open = 7 - len(known_cards) + (2 * for_competitor)
-    if number_of_cards_to_open == 0:
-        return result
+    if number_of_cards_to_open <= 0:
+        return set()
 
-    if number_of_cards_to_open == 1:
-        return {frozenset([card]) for card in deck_rest}
-
-    for card in deck_rest:
-        for _result in all_possible_sets_to_open(known_cards + (card,), for_competitor=for_competitor):
-            intermediate_inner_result = _result | {card}
-            result.add(intermediate_inner_result)
-    return result
+    deck_rest = FULL_DECK.difference(known_cards)
+    return {frozenset(card_set) for card_set in combinations(deck_rest, number_of_cards_to_open)}
 
 
 @lru_cache(128)
 def possible_boards(board: tuple[Card]) -> set[frozenset[Card]]:
     """Find all cards that can complete the board if we wouldn't know our own pocket cards"""
-    deck_rest = Deck.all_cards() - set(board)
-    if len(board) == 5:
+    number_of_cards_to_open = 5 - len(board)
+    if number_of_cards_to_open <= 0:
         return set()
 
-    if 5 - len(board) == 1:
-        return {frozenset([card]) for card in deck_rest}
-
-    result: set[frozenset[Card]] = set()
-    for card in deck_rest:
-        for _result in possible_boards(board + (card,)):  # noqa
-            result.add(_result | {card})
-    return result
+    deck_rest = FULL_DECK.difference(board)
+    return {frozenset(card_set) for card_set in combinations(deck_rest, number_of_cards_to_open)}
 
 
 def possible_board_according_to_hand(board: tuple[Card], hand: tuple[Card]) -> set[frozenset[Card]]:
     """All possible boards knowing own hand"""
-    possible_rest = possible_boards(board)
-    result = possible_rest.copy()
-    for _result in possible_rest:
-        for card in hand:
-            if card in _result:
-                result.discard(_result)
-                break
-    return result
+    hand_cards = frozenset(hand)
+    return {_result for _result in possible_boards(board) if _result.isdisjoint(hand_cards)}
 
 
 def possible_competitors_sets(board: tuple[Card], hand: tuple[Card]) -> set[frozenset[Card]]:

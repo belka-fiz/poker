@@ -49,7 +49,7 @@ def test_high_card_empty():
 def test_high_card_not_empty():
     high_card = Card(SUITS[3], VALUES[-2])
     cards = [Card(SUITS[0], v) for v in VALUES[1:5]] + [high_card]
-    assert combinations.high_card(cards)[0] == high_card
+    assert combinations.high_card(cards)[0] == high_card.value
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'high_card'
@@ -221,3 +221,17 @@ def test_royal_flush():
 def test_combinations_order(c1, c2):
     """test that combinations are sorted in the right order"""
     assert c1 > c2
+
+
+@pytest.mark.parametrize(
+    ('hand1', 'hand2', 'board'),
+    [
+        (['Jc', 'Tc'], ['Jh', 'Th'], ['8d', '5c', 'As', 'Td', 'Qs'])
+    ]
+)
+def test_combinations_are_equal(hand1: list[str], hand2: list[str], board: list[str]):
+    """verify that 2 equal combinations are actually equal"""
+    board_cards = [Card.init_by_alias(alias) for alias in board]
+    c1 = combinations.best_hand([Card.init_by_alias(alias) for alias in hand1] + board_cards)
+    c2 = combinations.best_hand([Card.init_by_alias(alias) for alias in hand2] + board_cards)
+    assert c1 == c2, "combinations are not equal"

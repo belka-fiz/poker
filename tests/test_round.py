@@ -5,40 +5,40 @@ from entities.players import Player
 
 
 @pytest.fixture(scope='class')
-def game_round() -> Round:
+def game_round_for_2() -> Round:
     players = [Player(300) for _ in range(2)]
     game_round = Round(players, 0, 10, debug=True)
     return game_round
 
 
-@pytest.mark.usefixtures('game_round')
+@pytest.mark.usefixtures('game_round_for_2')
 class TestRoundCards:
     """Make sure cards are given in the right amount on the right stages"""
 
-    def test_deck_is_reset_at_the_start_of_the_round(self, game_round):
-        assert game_round.deck.cards_left == 52
+    def test_deck_is_reset_at_the_start_of_the_round(self, game_round_for_2):
+        assert game_round_for_2.deck.cards_left == 52
 
-    def test_players_are_given_two_cards_at_pre_flop(self, game_round):
-        game_round.deal_players_cards()
-        game_round.new_stage()
-        assert game_round.get_status()['stage'] == 'pre-flop'
-        for player in game_round.players:
+    def test_players_are_given_two_cards_at_pre_flop(self, game_round_for_2):
+        game_round_for_2.deal_players_cards()
+        game_round_for_2.new_stage()
+        assert game_round_for_2.get_status()['stage'] == 'pre-flop'
+        for player in game_round_for_2.players:
             assert len(player.hand) == 2
 
-    def test_three_community_cards_are_open_on_flop(self, game_round):
-        game_round.new_stage()
-        assert game_round.get_status()['stage'] == 'flop'
-        assert len(game_round.board) == 3
+    def test_three_community_cards_are_open_on_flop(self, game_round_for_2):
+        game_round_for_2.new_stage()
+        assert game_round_for_2.get_status()['stage'] == 'flop'
+        assert len(game_round_for_2.board) == 3
 
-    def test_one_community_card_is_open_on_turn(self, game_round):
-        game_round.new_stage()
-        assert game_round.get_status()['stage'] == 'turn'
-        assert len(game_round.board) == 4
+    def test_one_community_card_is_open_on_turn(self, game_round_for_2):
+        game_round_for_2.new_stage()
+        assert game_round_for_2.get_status()['stage'] == 'turn'
+        assert len(game_round_for_2.board) == 4
 
-    def test_one_community_card_is_open_on_river(self, game_round):
-        game_round.new_stage()
-        assert game_round.get_status()['stage'] == 'river'
-        assert len(game_round.board) == 5
+    def test_one_community_card_is_open_on_river(self, game_round_for_2):
+        game_round_for_2.new_stage()
+        assert game_round_for_2.get_status()['stage'] == 'river'
+        assert len(game_round_for_2.board) == 5
 
 
 class TestBetsCollection:
@@ -62,3 +62,32 @@ class TestBetsCollection:
 
 class TestWinners:
     """Make sure winners are defined right and the prize is distributed to the right people in the right amount"""
+    def test_higher_combination_win(self):
+        """
+        one pot, one winner which is human. Making sure they are the only one in the winners list
+        """
+        pass
+
+    def test_lower_combination_looses(self):
+        """
+        one pot, one winner which is not. Making sure they are not in the winners list
+        """
+        pass
+
+    def test_draw_is_draw(self):
+        """
+        One pot, two players with equal combinations. Make sure both share the pot
+        """
+        pass
+
+    def test_multiple_pots_one_winner_wins_all(self):
+        pass
+
+    def test_multiple_pots_different_winners(self):
+        pass
+
+    def test_multiple_pots_winner_and_draw(self):
+        pass
+
+    def test_multiple_pots_draw_and_winner(self):
+        pass

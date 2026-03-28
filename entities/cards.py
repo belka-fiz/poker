@@ -2,6 +2,9 @@ from dataclasses import dataclass, field
 from random import shuffle
 
 
+from errors.errors import WrongAlias, WrongSuit, WrongValue
+
+
 @dataclass(repr=False)
 class Suit:
     """Card suit"""
@@ -38,6 +41,12 @@ class Value:
 
     def __eq__(self, other):
         return self.order == other.order
+    #
+    # def __lt__(self, other):
+    #     return self.order < other.order
+    #
+    # def __gt__(self, other):
+    #     return self.order > other.order
 
 
 SUITS = (
@@ -60,15 +69,31 @@ VALUES = (
     Value(11, 'Jack', 'J'),
     Value(12, 'Queen', 'Q'),
     Value(13, 'King', 'K'),
-    Value(14, 'Ace', 'A')
+    Value(14, 'Ace', 'A'),
 )
 ZERO_ACE: Value = Value(1, 'Ace', 'A')
+
+
+def find_suit_by_short_name(short_name: str) -> Suit:
+    for suit in SUITS:
+        if suit.short_name == short_name:
+            return suit
+    raise WrongSuit
+
+
+def find_value_by_short_name(short_name: str) -> Value:
+    for value in VALUES:
+        if value.short_name == short_name:
+            return value
+    raise WrongValue
 
 
 @dataclass(order=True, eq=True)
 class Card:
     """
     The card
+    suit: Suit
+    value: Value
     Cards are comparable by value and suit.
     Cards are equal if their values are equal
     """
@@ -84,6 +109,16 @@ class Card:
 
     def __hash__(self):
         return hash(self.suit) + hash(self.value)
+
+    @classmethod
+    def init_by_alias(cls, alias: str):
+        try:
+            short_value, short_suit = alias
+            suit = find_suit_by_short_name(short_suit)
+            value = find_value_by_short_name(short_value)
+        except ValueError:
+            raise WrongAlias
+        return cls(suit, value)
 
 
 class Deck:
