@@ -177,7 +177,8 @@ class StageBetAI:
     def how_much_to_bet(self, max_bet) -> float:
         """Deciding about the size of the raise using random"""
         bet = self.comfort_bet() * random.randint(0, 3)
-        return min(max(bet, max_bet), self.player.stack)
+        max_total_bet = self.player.decision.size + self.player.stack
+        return min(max(bet, max_bet), max_total_bet)
 
 
 class PreFlopDecider:
