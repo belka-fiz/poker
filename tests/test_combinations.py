@@ -28,17 +28,24 @@ def test_suited(suit, number):
 
 
 expected_pairs = [
-    [
+    (
         Card(SUITS[0], VALUES[0]),
         Card(SUITS[2], VALUES[0]),
-        Card(choice(SUITS), VALUES[2]),
-        Card(choice(SUITS), VALUES[3]),
-        Card(choice(SUITS), VALUES[4]),
-        Card(choice(SUITS), VALUES[6]),
-        Card(choice(SUITS), VALUES[8])
-    ],
-    [Card(suit, VALUES[3]) for suit in sample(SUITS, 2)] + [Card(choice(SUITS), value) for value in
-                                                            sample(VALUES[4:], 5)]
+        Card(SUITS[1], VALUES[2]),
+        Card(SUITS[3], VALUES[4]),
+        Card(SUITS[0], VALUES[7]),
+        Card(SUITS[1], VALUES[9]),
+        Card(SUITS[2], VALUES[11]),
+    ),
+    (
+        Card(SUITS[0], VALUES[3]),
+        Card(SUITS[1], VALUES[3]),
+        Card(SUITS[2], VALUES[0]),
+        Card(SUITS[3], VALUES[5]),
+        Card(SUITS[0], VALUES[8]),
+        Card(SUITS[1], VALUES[10]),
+        Card(SUITS[2], VALUES[12]),
+    )
 ]
 
 
@@ -71,8 +78,14 @@ def test_high_card_equal_combinations():
     assert combinations.best_hand(cards_1) == combinations.best_hand(cards_2)
 
 
+def test_best_hand_empty():
+    with pytest.raises(RuntimeError, match='No cards provided'):
+        combinations.best_hand([])
+
+
 @pytest.mark.parametrize('cards', expected_pairs, ids=str)
 def test_pair(cards):
+    cards = list(cards)
     shuffle(cards)
     assert combinations.pair(cards), f'{cards} do not form a pair'
     combination = combinations.best_hand(cards)
@@ -80,16 +93,87 @@ def test_pair(cards):
     assert combination[0].name == 'pair'
 
 
+def test_pair_order_by_kicker():
+    lower_kicker_pair = [
+        Card(SUITS[0], VALUES[8]),
+        Card(SUITS[1], VALUES[8]),
+        Card(SUITS[2], VALUES[12]),
+        Card(SUITS[3], VALUES[9]),
+        Card(SUITS[0], VALUES[6]),
+        Card(SUITS[1], VALUES[4]),
+        Card(SUITS[2], VALUES[1]),
+    ]
+    higher_kicker_pair = [
+        Card(SUITS[0], VALUES[8]),
+        Card(SUITS[1], VALUES[8]),
+        Card(SUITS[2], VALUES[12]),
+        Card(SUITS[3], VALUES[10]),
+        Card(SUITS[0], VALUES[6]),
+        Card(SUITS[1], VALUES[4]),
+        Card(SUITS[2], VALUES[1]),
+    ]
+    assert combinations.best_hand(lower_kicker_pair) < combinations.best_hand(higher_kicker_pair)
+
+
 def test_two_pairs():
-    cards = []
-    for value in sample(VALUES[5:], 2):
-        cards += [Card(suit, value) for suit in sample(SUITS, 2)]
-    cards += [Card(choice(SUITS), value) for value in sample(VALUES[:5], 3)]
+    cards = [
+        Card(SUITS[0], VALUES[10]),
+        Card(SUITS[1], VALUES[10]),
+        Card(SUITS[2], VALUES[7]),
+        Card(SUITS[3], VALUES[7]),
+        Card(SUITS[0], VALUES[1]),
+        Card(SUITS[1], VALUES[4]),
+        Card(SUITS[2], VALUES[12]),
+    ]
     shuffle(cards)
     assert combinations.two_pairs(cards), f'{cards} do not form two pairs'
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'two_pairs'
+
+
+def test_two_pairs_order_by_second_pair():
+    lower_two_pairs = [
+        Card(SUITS[0], VALUES[11]),
+        Card(SUITS[1], VALUES[11]),
+        Card(SUITS[2], VALUES[4]),
+        Card(SUITS[3], VALUES[4]),
+        Card(SUITS[0], VALUES[12]),
+        Card(SUITS[1], VALUES[7]),
+        Card(SUITS[2], VALUES[1]),
+    ]
+    higher_two_pairs = [
+        Card(SUITS[0], VALUES[11]),
+        Card(SUITS[1], VALUES[11]),
+        Card(SUITS[2], VALUES[5]),
+        Card(SUITS[3], VALUES[5]),
+        Card(SUITS[0], VALUES[12]),
+        Card(SUITS[1], VALUES[7]),
+        Card(SUITS[2], VALUES[1]),
+    ]
+    assert combinations.best_hand(lower_two_pairs) < combinations.best_hand(higher_two_pairs)
+
+
+def test_two_pairs_order_by_kicker():
+    lower_kicker_two_pairs = [
+        Card(SUITS[0], VALUES[11]),
+        Card(SUITS[1], VALUES[11]),
+        Card(SUITS[2], VALUES[6]),
+        Card(SUITS[3], VALUES[6]),
+        Card(SUITS[0], VALUES[3]),
+        Card(SUITS[1], VALUES[1]),
+        Card(SUITS[2], VALUES[0]),
+    ]
+    higher_kicker_two_pairs = [
+        Card(SUITS[0], VALUES[11]),
+        Card(SUITS[1], VALUES[11]),
+        Card(SUITS[2], VALUES[6]),
+        Card(SUITS[3], VALUES[6]),
+        Card(SUITS[0], VALUES[4]),
+        Card(SUITS[1], VALUES[1]),
+        Card(SUITS[2], VALUES[0]),
+    ]
+    assert combinations.best_hand(lower_kicker_two_pairs) < combinations.best_hand(higher_kicker_two_pairs)
 
 
 def test_none_two_pairs_by_length():
@@ -111,13 +195,42 @@ def test_two_pairs_with_value_error():
 
 
 def test_three():
-    cards = [Card(suit, VALUES[1]) for suit in sample(SUITS, 3)]
-    cards += [Card(choice(SUITS), value) for value in sample(VALUES[2:], 4)]
+    cards = [
+        Card(SUITS[0], VALUES[1]),
+        Card(SUITS[1], VALUES[1]),
+        Card(SUITS[2], VALUES[1]),
+        Card(SUITS[3], VALUES[4]),
+        Card(SUITS[0], VALUES[7]),
+        Card(SUITS[1], VALUES[10]),
+        Card(SUITS[2], VALUES[12]),
+    ]
     shuffle(cards)
     assert combinations.three_of_a_kind(cards), f'{cards} do not form three of a kind'
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'three_of_a_kind'
+
+
+def test_three_order_by_kicker():
+    lower_kicker_three = [
+        Card(SUITS[0], VALUES[9]),
+        Card(SUITS[1], VALUES[9]),
+        Card(SUITS[2], VALUES[9]),
+        Card(SUITS[3], VALUES[12]),
+        Card(SUITS[0], VALUES[5]),
+        Card(SUITS[1], VALUES[3]),
+        Card(SUITS[2], VALUES[0]),
+    ]
+    higher_kicker_three = [
+        Card(SUITS[0], VALUES[9]),
+        Card(SUITS[1], VALUES[9]),
+        Card(SUITS[2], VALUES[9]),
+        Card(SUITS[3], VALUES[12]),
+        Card(SUITS[0], VALUES[6]),
+        Card(SUITS[1], VALUES[3]),
+        Card(SUITS[2], VALUES[0]),
+    ]
+    assert combinations.best_hand(lower_kicker_three) < combinations.best_hand(higher_kicker_three)
 
 
 def test_none_three_by_length():
@@ -160,16 +273,60 @@ def test_straight_zero_ace():
     assert combination[0].name == 'straight'
 
 
+def test_straight_wheel_is_lower_than_six_high():
+    wheel = [
+        Card(SUITS[0], VALUES[-1]),
+        Card(SUITS[1], VALUES[0]),
+        Card(SUITS[2], VALUES[1]),
+        Card(SUITS[3], VALUES[2]),
+        Card(SUITS[0], VALUES[3]),
+    ]
+    six_high = [
+        Card(SUITS[0], VALUES[0]),
+        Card(SUITS[1], VALUES[1]),
+        Card(SUITS[2], VALUES[2]),
+        Card(SUITS[3], VALUES[3]),
+        Card(SUITS[0], VALUES[4]),
+    ]
+    assert combinations.best_hand(wheel) < combinations.best_hand(six_high)
+
+
 @pytest.mark.parametrize('suit', SUITS, ids=str)
 def test_flush(suit):
-    _values = list(VALUES)
-    cards = [Card(suit, _values.pop(randint(0, len(_values) - 1))) for _ in range(5)]
+    cards = [
+        Card(suit, VALUES[0]),
+        Card(suit, VALUES[2]),
+        Card(suit, VALUES[5]),
+        Card(suit, VALUES[8]),
+        Card(suit, VALUES[11]),
+    ]
     shuffle(cards)
-    print(cards)
     assert combinations.flush(cards), f'{cards} do not form a flush'
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'flush'
+
+
+def test_flush_order_by_values():
+    lower_flush = [
+        Card(SUITS[0], VALUES[12]),
+        Card(SUITS[0], VALUES[10]),
+        Card(SUITS[0], VALUES[8]),
+        Card(SUITS[0], VALUES[5]),
+        Card(SUITS[0], VALUES[2]),
+        Card(SUITS[1], VALUES[0]),
+        Card(SUITS[2], VALUES[3]),
+    ]
+    higher_flush = [
+        Card(SUITS[0], VALUES[12]),
+        Card(SUITS[0], VALUES[10]),
+        Card(SUITS[0], VALUES[8]),
+        Card(SUITS[0], VALUES[6]),
+        Card(SUITS[0], VALUES[2]),
+        Card(SUITS[1], VALUES[0]),
+        Card(SUITS[2], VALUES[3]),
+    ]
+    assert combinations.best_hand(lower_flush) < combinations.best_hand(higher_flush)
 
 
 def test_full_house():
@@ -181,6 +338,21 @@ def test_full_house():
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'full_house'
+
+
+def test_full_house_two_trips_uses_higher_trip_as_three_of_a_kind():
+    cards = [
+        Card(SUITS[0], VALUES[11]),
+        Card(SUITS[1], VALUES[11]),
+        Card(SUITS[2], VALUES[11]),
+        Card(SUITS[0], VALUES[8]),
+        Card(SUITS[1], VALUES[8]),
+        Card(SUITS[2], VALUES[8]),
+        Card(SUITS[3], VALUES[1]),
+    ]
+    combination, ranks = combinations.best_hand(cards)
+    assert combination.name == 'full_house'
+    assert ranks == (VALUES[11], VALUES[8])
 
 
 def test_four_of_a_kind():
@@ -204,6 +376,28 @@ def test_straight_flush():
     combination = combinations.best_hand(cards)
     assert isinstance(combination, tuple)
     assert combination[0].name == 'straight_flush'
+
+
+def test_straight_flush_wheel_is_lower_than_six_high():
+    wheel = [
+        Card(SUITS[0], VALUES[-1]),
+        Card(SUITS[0], VALUES[0]),
+        Card(SUITS[0], VALUES[1]),
+        Card(SUITS[0], VALUES[2]),
+        Card(SUITS[0], VALUES[3]),
+        Card(SUITS[1], VALUES[9]),
+        Card(SUITS[2], VALUES[11]),
+    ]
+    six_high = [
+        Card(SUITS[1], VALUES[0]),
+        Card(SUITS[1], VALUES[1]),
+        Card(SUITS[1], VALUES[2]),
+        Card(SUITS[1], VALUES[3]),
+        Card(SUITS[1], VALUES[4]),
+        Card(SUITS[2], VALUES[9]),
+        Card(SUITS[3], VALUES[11]),
+    ]
+    assert combinations.best_hand(wheel) < combinations.best_hand(six_high)
 
 
 def test_royal_flush():

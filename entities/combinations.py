@@ -302,6 +302,51 @@ def _straight_from_values(card_values: set[Value]) -> [None, tuple[Value, ...]]:
     return None
 
 
+def _hand_context(cards: tuple[Card, ...]) -> tuple[dict[Value, int], dict[Suit, list[Value]], list[Value], set[Value]]:
+    """Precompute card groupings used by best_hand."""
+    value_counts: dict[Value, int] = {}
+    suit_values: dict[Suit, list[Value]] = {}
+    values_desc: list[Value] = []
+    unique_values: set[Value] = set()
+
+    for card in cards:
+        value = card.value
+        value_counts[value] = value_counts.get(value, 0) + 1
+        suit_values.setdefault(card.suit, []).append(value)
+        values_desc.append(value)
+        unique_values.add(value)
+
+    values_desc.sort(reverse=True)
+    return value_counts, suit_values, values_desc, unique_values
+
+
+def _best_straight_flush(suit_values: dict[Suit, list[Value]]) -> [None, tuple[Combination, tuple[Value, ...]]]:
+    """Return the strongest straight flush or royal flush."""
+    for suit in SUITS:
+        flush_values = suit_values.get(suit)
+        if not flush_values or len(flush_values) < 5:
+            continue
+
+        straight_flush_found = _straight_from_values(set(flush_values))
+        if not straight_flush_found:
+            continue
+
+        if straight_flush_found[0] == VALUE_BY_ORDER[14]:
+            return COMBINATIONS[0], straight_flush_found
+        return COMBINATIONS[1], straight_flush_found
+    return None
+
+
+def _values_grouped_by_count(value_counts: dict[Value, int]) -> dict[int, list[Value]]:
+    """Group card values by how often they appear."""
+    groups_by_count: dict[int, list[Value]] = {}
+    for value, count in value_counts.items():
+        groups_by_count.setdefault(count, []).append(value)
+    for values in groups_by_count.values():
+        values.sort(reverse=True)
+    return groups_by_count
+
+
 def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
     """
     Defines the best hand that can be made from the given cards.
@@ -313,36 +358,13 @@ def best_hand(cards: Iterable[Card]) -> tuple[Combination, tuple]:
     if not cards:
         raise RuntimeError("No cards provided")
 
-    value_counts: dict[Value, int] = {}
-    suit_values: dict[Suit, list[Value]] = {}
-    values_desc: list[Value] = []
-    unique_values: set[Value] = set()
-    for card in cards:
-        value = card.value
-        suit = card.suit
-        value_counts[value] = value_counts.get(value, 0) + 1
-        suit_values.setdefault(suit, []).append(value)
-        values_desc.append(value)
-        unique_values.add(value)
+    value_counts, suit_values, values_desc, unique_values = _hand_context(cards)
 
-    values_desc.sort(reverse=True)
+    straight_flush = _best_straight_flush(suit_values)
+    if straight_flush:
+        return straight_flush
 
-    straight_flush_found = None
-    for suit in SUITS:
-        flush_values = suit_values.get(suit)
-        if not flush_values or len(flush_values) < 5:
-            continue
-        straight_flush_found = _straight_from_values(set(flush_values))
-        if straight_flush_found:
-            if straight_flush_found[0] == VALUE_BY_ORDER[14]:
-                return COMBINATIONS[0], straight_flush_found
-            return COMBINATIONS[1], straight_flush_found
-
-    groups_by_count: dict[int, list[Value]] = {}
-    for value, count in value_counts.items():
-        groups_by_count.setdefault(count, []).append(value)
-    for values in groups_by_count.values():
-        values.sort(reverse=True)
+    groups_by_count = _values_grouped_by_count(value_counts)
 
     fours = groups_by_count.get(4, [])
     if fours:
