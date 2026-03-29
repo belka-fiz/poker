@@ -41,12 +41,6 @@ class Value:
 
     def __eq__(self, other):
         return self.order == other.order
-    #
-    # def __lt__(self, other):
-    #     return self.order < other.order
-    #
-    # def __gt__(self, other):
-    #     return self.order > other.order
 
 
 SUITS = (
