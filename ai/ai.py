@@ -7,6 +7,8 @@
 3) Try to guess opponents' hands by their bets
 """
 from functools import lru_cache
+from itertools import combinations
+from math import comb
 from secrets import SystemRandom
 
 from common.config import WEIGHT_QUOTIENT
@@ -19,57 +21,26 @@ from entities.round import Round
 from errors.errors import UnavailableDecision, TooSmallBetError
 
 random = SystemRandom()
-
-
-@lru_cache(128)
-def all_possible_sets_to_open(
-        known_cards: [tuple[Card], set[Card]],
-        for_competitor=False
-) -> set[frozenset[Card]]:
-    """find all cards that can be possibly opened later or found in competitor's hand"""
-    result: set[frozenset[Card]] = set()
-    deck_rest = Deck.all_cards() - set(known_cards)
-    number_of_cards_to_open = 7 - len(known_cards) + (2 * for_competitor)
-    if number_of_cards_to_open == 0:
-        return result
-
-    if number_of_cards_to_open == 1:
-        return {frozenset([card]) for card in deck_rest}
-
-    for card in deck_rest:
-        for _result in all_possible_sets_to_open(known_cards + (card,), for_competitor=for_competitor):
-            intermediate_inner_result = _result | {card}
-            result.add(intermediate_inner_result)
-    return result
+FULL_DECK = frozenset(Deck.all_cards())
+UNSET = object()
 
 
 @lru_cache(128)
 def possible_boards(board: tuple[Card]) -> set[frozenset[Card]]:
     """Find all cards that can complete the board if we wouldn't know our own pocket cards"""
-    deck_rest = Deck.all_cards() - set(board)
-    if len(board) == 5:
+    number_of_cards_to_open = 5 - len(board)
+    if number_of_cards_to_open <= 0:
         return set()
 
-    if 5 - len(board) == 1:
-        return {frozenset([card]) for card in deck_rest}
-
-    result: set[frozenset[Card]] = set()
-    for card in deck_rest:
-        for _result in possible_boards(board + (card,)):  # noqa
-            result.add(_result | {card})
-    return result
+    deck_rest = FULL_DECK.difference(board)
+    return {frozenset(card_set) for card_set in combinations(deck_rest, number_of_cards_to_open)}
 
 
+@lru_cache(128)
 def possible_board_according_to_hand(board: tuple[Card], hand: tuple[Card]) -> set[frozenset[Card]]:
     """All possible boards knowing own hand"""
-    possible_rest = possible_boards(board)
-    result = possible_rest.copy()
-    for _result in possible_rest:
-        for card in hand:
-            if card in _result:
-                result.discard(_result)
-                break
-    return result
+    hand_cards = frozenset(hand)
+    return {_result for _result in possible_boards(board) if _result.isdisjoint(hand_cards)}
 
 
 def possible_competitors_sets(board: tuple[Card], hand: tuple[Card]) -> set[frozenset[Card]]:
@@ -92,7 +63,6 @@ def update_smallest(chances: dict[Combination: float]) -> None:
             break
 
 
-@lru_cache(128)
 class StageBetAI:
     """
     Bet decider for AI in the middle of the game
@@ -109,10 +79,8 @@ class StageBetAI:
         self.known_cards = self.hand + board
         self.blind = blind
         self.players_left = players_left
-        self.possible_left_cards = possible_board_according_to_hand(board, self.hand)
-        self.possible_competitors_cards = all_possible_sets_to_open(self.known_cards, True)
-        self.possible_variations = len(self.possible_left_cards) or 1
-        self.possible_competitors_variations = len(self.possible_competitors_cards)
+        self.possible_variations = self._possible_board_variations() or 1
+        self.possible_competitors_variations = self._possible_competitor_variations() or 1
         self.my_chances = self._guess_my_chances()
         self.competitors_chances = self._guess_opponents_chances()
         self.my_weight = sum(self.my_chances[cmb] * (WEIGHT_QUOTIENT ** cmb.priority) for cmb in COMBINATIONS)
@@ -120,6 +88,37 @@ class StageBetAI:
             self.competitors_chances[cmb] * (WEIGHT_QUOTIENT ** cmb.priority) for cmb in COMBINATIONS)
         self.weight_ratio = self.my_weight / self.competitors_weight
         self.bluff: bool = False
+        self._will_i_win_by_weight = UNSET
+
+    def _iter_possible_board_cards(self):
+        cards_left_to_open = 5 - len(self.board)
+        if cards_left_to_open <= 0:
+            return
+
+        deck_rest = FULL_DECK.difference(self.known_cards)
+        for card_set in combinations(deck_rest, cards_left_to_open):
+            yield card_set
+
+    def _iter_possible_competitor_cards(self):
+        cards_to_draw = 7 - len(self.known_cards) + 2
+        if cards_to_draw <= 0:
+            return
+
+        deck_rest = FULL_DECK.difference(self.known_cards)
+        for card_set in combinations(deck_rest, cards_to_draw):
+            yield card_set
+
+    def _possible_board_variations(self) -> int:
+        cards_left_to_open = 5 - len(self.board)
+        if cards_left_to_open <= 0:
+            return 0
+        return comb(len(FULL_DECK) - len(self.known_cards), cards_left_to_open)
+
+    def _possible_competitor_variations(self) -> int:
+        cards_to_draw = 7 - len(self.known_cards) + 2
+        if cards_to_draw <= 0:
+            return 0
+        return comb(len(FULL_DECK) - len(self.known_cards), cards_to_draw)
 
     def _guess_my_chances(self) -> dict[Combination: float]:
         """Chances of getting each combination"""
@@ -129,7 +128,7 @@ class StageBetAI:
             absolute_chances.update({best_hand(self.known_cards)[0]: 1})
             return absolute_chances
 
-        for possible_card_set in self.possible_left_cards:
+        for possible_card_set in self._iter_possible_board_cards():
             possible_hand = self.known_cards + tuple(possible_card_set)
             absolute_chances[best_hand(possible_hand)[0]] += 1
         relative_chances = {k: v / self.possible_variations for k, v in absolute_chances.items()}
@@ -140,14 +139,13 @@ class StageBetAI:
         """Chances for an opponent to get each combination"""
         # todo add combination's kicker
         absolute_chances = {cmb: 0 for cmb in COMBINATIONS}
-        for possible_card_set in self.possible_competitors_cards:
+        for possible_card_set in self._iter_possible_competitor_cards():
             possible_hand = self.board + tuple(possible_card_set)
             absolute_chances[best_hand(possible_hand)[0]] += 1
         relative_chances = {k: (v / self.possible_competitors_variations) for k, v in absolute_chances.items()}
         update_smallest(relative_chances)
         return relative_chances
 
-    @lru_cache(128)
     def will_i_win_by_weight(self):
         """
         Our assumption if we are winning or not
@@ -155,16 +153,23 @@ class StageBetAI:
         False if chances are pretty bad
         None if we are not sure
         """
+        if self._will_i_win_by_weight is not UNSET:
+            return self._will_i_win_by_weight
+
         if self.weight_ratio > 1:
-            return True
+            self._will_i_win_by_weight = True
+            return self._will_i_win_by_weight
 
         if self.weight_ratio < 0.79:
             if self.competitors_weight < 5 and random.randint(0, 100) > 60:
                 self.bluff = True
-                return True
-            return False
+                self._will_i_win_by_weight = True
+                return self._will_i_win_by_weight
+            self._will_i_win_by_weight = False
+            return self._will_i_win_by_weight
 
-        return None
+        self._will_i_win_by_weight = None
+        return self._will_i_win_by_weight
 
     def comfort_bet(self) -> float:
         """Defining the bet we are ready to call or raise"""
@@ -195,7 +200,8 @@ class StageBetAI:
     def how_much_to_bet(self, max_bet) -> float:
         """Deciding about the size of the raise using random"""
         bet = self.comfort_bet() * random.randint(0, 3)
-        return min(max(bet, max_bet), self.player.stack)
+        max_total_bet = self.player.decision.size + self.player.stack
+        return min(max(bet, max_bet), max_total_bet)
 
 
 class PreFlopDecider:
@@ -269,6 +275,35 @@ class AI(Player):
                  # stage_agression: float = 0
                  ):
         super().__init__(start_stack, is_ai=True, name=name)
+        self._stage_ai_key = None
+        self._stage_ai_cache = None
+
+    def _current_stage_ai_key(self, board, blind_size, number_of_players_left):
+        """Build a cache key for stage-level AI decisions."""
+        return tuple(self.hand), tuple(board), blind_size, number_of_players_left
+
+    def _get_stage_decider(self, board, blind_size, number_of_players_left):
+        """Reuse the current stage decider while the stage state is unchanged."""
+        key = self._current_stage_ai_key(board, blind_size, number_of_players_left)
+        if self._stage_ai_key != key:
+            self._stage_ai_key = key
+            self._stage_ai_cache = StageBetAI(tuple(board), self, blind_size, number_of_players_left)
+        return self._stage_ai_cache
+
+    def reset_stage_ai_cache(self):
+        """Drop stage-local AI state as soon as it is no longer useful."""
+        self._stage_ai_key = None
+        self._stage_ai_cache = None
+
+    def new_stage(self):
+        """Reset player state and release stage-level AI calculations."""
+        super().new_stage()
+        self.reset_stage_ai_cache()
+
+    def new_game_round(self):
+        """Reset round state and release any cached AI decider."""
+        super().new_game_round()
+        self.reset_stage_ai_cache()
 
     def make_a_move(self, board, current_max_bet, stage_index, blind_size, number_of_players_left):
         """Calling the logic for bet decisions"""
@@ -291,7 +326,7 @@ class AI(Player):
                       f"{self.decision.size=}, {action=}, {amount=}")
                 raise e
         else:
-            decider = StageBetAI(board, self, blind_size, number_of_players_left)
+            decider = self._get_stage_decider(board, blind_size, number_of_players_left)
             ai_decisions = decider.should_i_bet(current_max_bet)
             try:
                 action = [d for d in ai_decisions if d in self.available_actions][0]
@@ -328,4 +363,12 @@ def possible_competitors_hands(known_cards: tuple[Card] = None) -> set[frozenset
     return result
 
 
+def clear_ai_caches(*args, **kwargs):
+    """Release cached AI helper data when a stage or round is over."""
+    possible_boards.cache_clear()
+    possible_board_according_to_hand.cache_clear()
+
+
+subscribe(EventType.NEW_STAGE, clear_ai_caches)
+subscribe(EventType.ROUND_END, clear_ai_caches)
 subscribe(EventType.PLAYER_MAKE_MOVE, AI.make_a_move_by_round)

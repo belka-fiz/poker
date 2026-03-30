@@ -7,15 +7,23 @@ from entities.pot import Pot
 
 @pytest.fixture(scope="module")
 def players():
+    """fixture of 3 players with 100 gold for each"""
     return [Player(100, name=name) for name in ['Alice', 'Bob', 'Charlie']]
 
 
 @pytest.fixture(scope="function")
 def pot(players):
+    """fixture of a pot with 3 players"""
     return Pot(players)
 
 
 def test_init(players, pot):
+    """
+    Init pot, check that:
+        - No players are in the pot in the beginning
+        - all players are in the pot after they have been added
+        - Each player's contribution is initially 0
+    """
     assert players is not pot.players
     for player in players:
         assert pot._contributions[player] == 0.0
@@ -24,6 +32,11 @@ def test_init(players, pot):
 
 
 def test_add_chips(players, pot):
+    """
+    Players add chips. Check that
+        - each player's contribution is counted for themselves
+        - the chips are added to the pot
+    """
     pot.add_chips(players[0], 20)
     assert pot._contributions[players[0]] == 20
     assert pot.pot_size == 20
@@ -36,6 +49,7 @@ def test_add_chips(players, pot):
 
 
 def test_add_zero_chips(players, pot):
+    """Make sure 0 contribution does not increase neither the pot nor player's contribution"""
     p1 = players[0]
     pot.add_chips(p1, 0)
     assert pot.pot_size == 0
@@ -43,16 +57,26 @@ def test_add_zero_chips(players, pot):
 
 
 def test_remove_player(players):
+    """
+    Make sure that if player folds:
+        - their contribution stays in the pot
+        - their name remains in the contributors list
+        - the player is excluded from the list of pretenders
+    """
     from entities.bet import Bet, Decision
     p3 = Player(100, name='Folder')
     test_pot = Pot(players + [p3])
     p3.ask_for_a_decision(100)
     p3.decide(Decision(Bet.FOLD))
+    # todo add previous bet for the player and make sure their bet stays
     assert p3 not in test_pot.players
     assert p3 in test_pot._contributions.keys()
 
 
 def test_get_active_players(players, pot):
+    """
+    Check that all active players are present in the list
+    """
     active_players = pot.players
     assert len(active_players) == 3
     for player in players:
@@ -60,6 +84,19 @@ def test_get_active_players(players, pot):
 
 
 def test_recalculate_pots_three_different(players, pot):
+    """
+    2 phases:
+        1: the players make three different bets
+            - There are 3 pots
+            - Each pot has the amount of money according to the contributed amount and players
+            - Each pot has expected players according to their bets
+            - The sum of money in the pots equals to total bets amount
+        2: Player 1 folds
+            - There are 2 pots
+            - The pots with only Player 2 are summed and united
+            - The remaining pots have expected players according to their contribution
+            - The sum remains the same
+    """
     # todo separate test into two
     p1, p2, p3 = players
     pot.add_chips(p1, 20)
@@ -70,13 +107,14 @@ def test_recalculate_pots_three_different(players, pot):
     assert pot.pots[0] == ([p1, p2, p3], 30)
     assert pot.pots[1] == ([p1, p2], 20)
     assert pot.pots[2] == ([p2], 10)
-    assert sum(ps for _, ps in pot.pots) == pot.pot_size
+    assert sum(ps for _, ps in pot.pots) == pot.pot_size == 60
+
     pot.remove_player(p1)
     pot.recalculate_pots()
     assert len(pot.pots) == 2
     assert pot.pots[0] == ([p2, p3], 30)
     assert pot.pots[1] == ([p2], 30)
-    assert sum(pot.size for pot in pot.pots) == pot.pot_size
+    assert sum(pot.size for pot in pot.pots) == pot.pot_size == 60
 
 
 def test_recalculate_pots_same_size(players, pot):
@@ -94,28 +132,39 @@ Looce_100 = Player(100, name="Looce")
 Looce_200 = Player(200, name="Looce")
 
 distr_parametrization = [
-    (Pot([Wince_100, Looce_100]), [(None, [Wince_100])], {Wince_100: 200}),
-    (Pot([Wince_200, Looce_100]), [(None, [Wince_200])], {Wince_200: 300}),
-    (Pot([Wince_100]), [(None, [Wince_100])], {Wince_100: 100}),
-    (Pot([Wince_100, Midce_150, Looce_200]), [(None, [Wince_100]),
+    (Pot([Wince_100, Looce_100]), [(None, [Wince_100])], {Wince_100: 200}),  # one size - one winner
+    (Pot([Wince_200, Looce_100]), [(None, [Wince_200])], {Wince_200: 300}),  # several sizes - one winner from the biggest pot  # noqa
+    (Pot([Wince_100]), [(None, [Wince_100])], {Wince_100: 100}),  # one player left - the winner
+    (Pot([Wince_100, Midce_150, Looce_200]), [(None, [Wince_100]),  # three sizes, each time a different winner
                                               (None, [Midce_150]),
                                               (None, [Looce_200])], {Wince_100: 300,
                                                                      Midce_150: 100,
                                                                      Looce_200: 50}),
-    (Pot([Wince_100, Looce_100]), [(None, [Wince_100, Looce_100])], {Wince_100: 100,
+    (Pot([Wince_100, Looce_100]), [(None, [Wince_100, Looce_100])], {Wince_100: 100,  # two winners in one pot
                                                                      Looce_100: 100})
 ]
 
 
 @pytest.mark.parametrize('parametrized_pot, rating, expected_wins', distr_parametrization)
-def test_distribute_pot(parametrized_pot: Pot, rating: list[tuple[tuple, list]], expected_wins: dict[Player: int]):
+def test_distribute_pot(
+        parametrized_pot: Pot,
+        rating: list[tuple[tuple, list]],
+        expected_wins: dict[Player: int],
+):
     """
-    test pot distribution:
-    + one size - one winner
-    + several sizes - one winner from the biggest pot
-    + one player left - the winner
-    + three sizes, each time a different winner
-    + two winners in one pot
+    Test pot distribution according to players rating and their contribution.
+    Script(repeats round end behavior):
+        - Players make their bets
+        - Pots are recalculated
+        - Test provides pre-defined players rating
+        - Test calculates total prizes for each player
+        - Test verifies that expected prizes match with calculated totals
+    Cases:
+        one size - one winner
+        several sizes - one winner from the biggest pot
+        one player left - the winner
+        three sizes, each time a different winner
+        two winners in one pot
     """
     for player in parametrized_pot.players:
         parametrized_pot.add_chips(player, player.stack)

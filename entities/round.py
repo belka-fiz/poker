@@ -27,7 +27,17 @@ class Round:
     }
 
     def __init__(self, players: list[Player], dealer_index: int, blind_size: float, debug: bool = False):
-        """Initialize the game"""
+        """
+        Initialize the game round
+        :param players: - the list of players participating
+        :param dealer_index: - the player that "deals". The origin to calculate blinders
+        :param blind_size: - big blind size
+        :param debug: - flag for tests. disables automated triggering of
+            - card deal
+            - stage cycle
+            - bets collection(and requests)
+            - winner calculation
+        """
         self.players: list[Union[Player]] = players[dealer_index + 1:] + players[:dealer_index + 1]
         self.blind_size = blind_size
         self.debug = debug

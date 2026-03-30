@@ -28,3 +28,15 @@ class GameNotFoundError(BaseException):
 
 class TooSmallBetError(BaseException):
     """Player can't post a bet smaller than the current one except all-in"""
+
+
+class WrongSuit(ValueError):
+    """Tried to find a suit by wrong short name"""
+
+
+class WrongValue(ValueError):
+    """Tried to find a value by wrong short name"""
+
+
+class WrongAlias(ValueError):
+    """Tried to get a card with wrong alias and/or unavailable suit or value"""

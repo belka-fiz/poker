@@ -45,6 +45,7 @@ class TestRoundCards:
         assert len(game_round.board) == 5
 
 
+
 @pytest.mark.skip(reason="Not implemented")
 class TestBetsCollection:
     """Make sure the bets are subtracted from the players stacks and added to the pot"""
@@ -65,5 +66,35 @@ class TestBetsCollection:
         pass
 
 
+@pytest.mark.skip(reason="Not implemented")
 class TestWinners:
     """Make sure winners are defined right and the prize is distributed to the right people in the right amount"""
+    def test_higher_combination_win(self):
+        """
+        one pot, one winner which is human. Making sure they are the only one in the winners list
+        """
+        pass
+
+    def test_lower_combination_looses(self):
+        """
+        one pot, one winner which is not. Making sure they are not in the winners list
+        """
+        pass
+
+    def test_draw_is_draw(self):
+        """
+        One pot, two players with equal combinations. Make sure both share the pot
+        """
+        pass
+
+    def test_multiple_pots_one_winner_wins_all(self):
+        pass
+
+    def test_multiple_pots_different_winners(self):
+        pass
+
+    def test_multiple_pots_winner_and_draw(self):
+        pass
+
+    def test_multiple_pots_draw_and_winner(self):
+        pass

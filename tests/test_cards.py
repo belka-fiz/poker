@@ -1,6 +1,7 @@
 import pytest
 
 from entities.cards import Deck, Value, Card, VALUES, SUITS
+from errors.errors import WrongAlias
 
 
 def test_all_cards_hashes_are_uniq():
@@ -66,3 +67,36 @@ def test_card_repr():
     """The name of card should be formed from the Value and Suit right"""
     a = Card(SUITS[0], Value(14, 'Ace', 'A'))
     assert repr(a) == repr(a.value) + repr(a.suit)
+
+
+@pytest.mark.parametrize("suit", ['c', 'd', 'h', 's'])
+@pytest.mark.parametrize("value", ['2', '3', '4', '5', '6', '7', '8', '9', 'T', 'J', 'Q', 'K', 'A'])
+def test_get_card_by_alias_positive(suit, value):
+    """Test if we can create a card by alias"""
+    card = Card.init_by_alias(value + suit)
+    assert isinstance(card, Card)
+
+
+@pytest.mark.parametrize('alias', ["Aa", "1c", "Xx", "Jcx"])
+def test_create_card_with_wrong_alias(alias):
+    """Trying to create card with wrong alias raises WrongAlias error"""
+    with pytest.raises(WrongAlias):
+        Card.init_by_alias(alias)
+
+
+def test_initialized_by_alias_are_equivalent():
+    """Initialized by alias cards are as legit as traditional"""
+    eq1 = Card(SUITS[0], VALUES[0])
+    eq2 = Card.init_by_alias('2d')
+    assert eq1.suit == eq2.suit, "suits are different"
+    assert eq1.value == eq2.value, "values are different"
+    assert eq1 == eq2, "cards are not equal"
+
+
+def test_initialized_by_alias_are_comparable_with_traditional():
+    """Initialized by alias cards are as legit as traditional"""
+    eq1 = Card(SUITS[0], VALUES[0])
+    eq2 = Card.init_by_alias('As')
+    assert eq1.suit != eq2.suit, "suits are not different"
+    assert eq1.value != eq2.value, "values are not different"
+    assert eq1 < eq2, "cards are not equal"
